@@ -1,8 +1,12 @@
 module Types where
 
 data Type
-  = Free
-  | Int
+  = Int
   | Bool
   | Arrow Type Type
-  deriving (Show, Eq)
+  deriving Eq
+
+instance Show Type where
+  show Int = "int"
+  show Bool = "bool"
+  show (Arrow l r) = show l ++ " -> " ++ show r
