@@ -4,6 +4,7 @@ module Parser where
 import Data.Char
 import qualified Lexer as L
 import qualified Types as T
+import qualified Trail as E
 }
 
 %name calc
@@ -50,7 +51,7 @@ Exp       : id                               { Id $1 }
           | '<' id ';' id '>'                { AuditedVar $2 $4 }
           | '!' id Exp                       { AuditedUnit $2 $3 }
           | let id be Exp in Exp             { AuditedComp $2 $4 $6 }
-          | trl '<' Exp '>'                  { TrailInspect $3 }
+          | Exp '<' Exp '>'                  { TrailInspect $1 $3 }
 
 {
 
@@ -67,8 +68,9 @@ data Exp
   | Abs String T.Type Exp
   | App Exp Exp
   | AuditedVar String String
-  | AuditedUnit String Exp
+  | AuditedUnit String Exp E.Trail
   | AuditedComp String Exp Exp
-  | TrailInspect Exp
+  | TrailInspect Exp Exp
+  | DerivedTerm E.Trail Exp
   deriving Show
 }
