@@ -17,12 +17,24 @@ tokens :-
   "}"                             { \s -> RBrace }
   "("                             { \s -> LParen }
   ")"                             { \s -> RParen }
+  "["                             { \s -> LSquare }
+  "]"                             { \s -> RSquare }
   "<"                             { \s -> LBrack }
   ">"                             { \s -> RBrack }
   ";"                             { \s -> Semi }
   ":"                             { \s -> Colon }
   "!"                             { \s -> Bang }
   "."                             { \s -> Dot }
+  "|"                             { \s -> Bar }
+  'r'                             { \s -> R }
+  's'                             { \s -> S }
+  't'                             { \s -> T }
+  ba                              { \s -> BA }
+  bb                              { \s -> BB }
+  ti                              { \s -> TI }
+  abs                             { \s -> ABS }
+  app                             { \s -> APP }
+  trpl                            { \s -> TRPL }
   let                             { \s -> Let }
   be                              { \s -> Be }
   in                              { \s -> In }
@@ -45,12 +57,24 @@ data Token
   | RBrace
   | LParen
   | RParen
+  | LSquare
+  | RSquare
   | LBrack
   | RBrack
   | Semi
   | Colon
   | Dot
+  | Bar
   | Bang
+  | R
+  | S
+  | T
+  | BA
+  | BB
+  | TI
+  | ABS
+  | APP
+  | TRPL
   | Let
   | Be
   | In
@@ -61,7 +85,7 @@ data Token
   | TBool
   | Var String
   | Num Int
-	deriving (Eq,Show)
+  deriving (Eq,Show)
 
 lexer = alexScanTokens
 }
