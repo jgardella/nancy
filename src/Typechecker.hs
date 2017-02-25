@@ -8,6 +8,10 @@ import Util
 
 type TypePair = (T.Type, T.Proof)
 
+typecheckProgramEmptyEnvs :: Program -> Maybe TypePair
+typecheckProgramEmptyEnvs program =
+  typecheckProgram program empty empty empty
+
 typecheckProgram :: Program -> Env T.Type -> Env T.Type -> Env T.Trail -> Maybe TypePair
 typecheckProgram (Program exp) =
   typecheckExpression exp
