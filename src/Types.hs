@@ -22,7 +22,7 @@ data Proof
     | ConstantBool Bool
     | Abstraction Type Proof
     | Application Proof Proof
-    | ValidityHypothesis String String
+    | ValidityHypothesis String String String
     | BoxIntroduction (Env Trail) Proof
     | BoxElimination Type Proof Proof
     | TrailInspectionP String Proof Proof Proof Proof Proof Proof Proof Proof Proof Proof

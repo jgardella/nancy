@@ -53,6 +53,7 @@ Program   : Exp                              { Program $1 }
 Type      : int                              { T.Int }
           | bool                             { T.Bool }
           | Type '->' Type                   { T.Arrow $1 $3 }
+          | '!' Type                         { T.Audited $2 }
 R         : 'r' '(' id ')' '.' Exp           { Reflexivity $3 $6 }
 S         : 's' '(' id ')' '.' Exp           { Symmetry $3 $6 }
 T         : 't' '(' id id ')' '.' Exp        { Transitivity $3 $4 $7}
@@ -67,7 +68,8 @@ Exp       : id                               { Id $1 }
           | num                              { Number $1 }
           | true                             { Boolean True }
           | false                            { Boolean False }
-          | fun id ':' Type '.' '{' Exp '}'  { Abs $2 $4 $7 }
+          | '(' Exp ')'                      { Brack $2 }
+          | fun '(' id ':' Type ')' '->' Exp { Abs $3 $5 $8 }
           | Exp Exp                          { App $1 $2 }
           | '<' id ';' id '|' id '>'         { AuditedVar $2 $4 $6 }
           | '!' id Exp                       { AuditedUnit $2 $3 }
@@ -86,6 +88,7 @@ data Exp
   = Id String
   | Number Int
   | Boolean Bool
+  | Brack Exp
   | Abs String T.Type Exp
   | App Exp Exp
   | AuditedVar String String String
