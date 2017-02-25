@@ -1,6 +1,7 @@
 module Typechecker where
 
 import Parser
+import Language
 import Types as T
 import Env
 import Util
@@ -50,16 +51,16 @@ typecheckExpression (AuditedComp u arg body) tEnv pEnv eEnv = do
     _ -> Nothing
 typecheckExpression
   (TrailInspect trailVar
-    (Parser.Reflexivity r1 exp_r)
-    (Parser.Symmetry s1 exp_s)
-    (Parser.Transitivity t1 t2 exp_t)
-    (Parser.Beta ba1 ba2 exp_ba)
-    (Parser.BetaBox bb1 bb2 exp_bb)
-    (Parser.TrailInspection ti1 ti2 exp_ti)
-    (Parser.Abstraction abs1 exp_abs)
-    (Parser.Application app1 app2 exp_app)
-    (Parser.Let let1 let2 exp_let)
-    (Parser.Replacement e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
+    (Language.Reflexivity r1 exp_r)
+    (Language.Symmetry s1 exp_s)
+    (Language.Transitivity t1 t2 exp_t)
+    (Language.Beta ba1 ba2 exp_ba)
+    (Language.BetaBox bb1 bb2 exp_bb)
+    (Language.TrailInspection ti1 ti2 exp_ti)
+    (Language.Abstraction abs1 exp_abs)
+    (Language.Application app1 app2 exp_app)
+    (Language.Let let1 let2 exp_let)
+    (Language.Replacement e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
     tEnv pEnv eEnv = do
   trail <- load trailVar eEnv
   -- todo find initial type, store for all mappings

@@ -1,12 +1,15 @@
-import Parser
-import Lexer
+module Main(main) where
+
+import Parser( parseProgram )
+import System.Environment ( getArgs )
 import Typechecker
-import System.Environment
-import qualified Env as Env
-
-lexAndParse = calc . lexer
-
-typecheckStr str = (typecheckProgram . lexAndParse) str Env.empty Env.empty Env.empty
+import qualified Env
 
 main :: IO ()
-main = getArgs >>= print . typecheckStr . head
+main = do
+  args <- getArgs
+  result <- case args of
+              []  -> fmap (parseProgram "<stdin>") getContents
+              [f] -> fmap (parseProgram f) (readFile f)
+              _   -> error "expected max. 1 argument"
+  either putStrLn print result

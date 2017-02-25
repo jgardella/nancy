@@ -1,50 +1,56 @@
 {
-module Parser where
+{-# OPTIONS -w #-}
+module Parser( parseProgram ) where
 
 import Data.Char
-import qualified Lexer as L
+import Lexer
+import Language
 import qualified Types as T
 }
 
-%name calc
-%tokentype { L.Token }
-%error { parseError }
+%name parse
+%tokentype { Token }
+%monad { Alex }
+%lexer { lexwrap } { Token _ TokenEOF }
+-- Without this we get a type error
+%error { happyError }
+
 
 %token
-  id    { L.Var $$ }
-  num   { L.Num $$ }
-  fun   { L.Fun }
-  '->'  { L.Arrow }
-  '('   { L.LParen }
-  ')'   { L.RParen }
-  '['   { L.LSquare }
-  ']'   { L.RSquare }
-  '{'   { L.LBrace }
-  '}'   { L.RBrace }
-  '<'   { L.LBrack }
-  '>'   { L.RBrack }
-  ';'   { L.Semi }
-  ':'   { L.Colon }
-  '!'   { L.Bang }
-  '.'   { L.Dot }
-  '|'   { L.Bar }
-  'r'   { L.R }
-  's'   { L.S }
-  't'   { L.T }
-  ba    { L.BA }
-  bb    { L.BB }
-  ti    { L.TI }
-  abs   { L.ABS }
-  app   { L.APP }
-  trpl  { L.TRPL }
-  let   { L.Let }
-  be    { L.Be }
-  in    { L.In }
-  trl   { L.Trail }
-  int   { L.TInt }
-  bool  { L.TBool }
-  true  { L.TTrue }
-  false { L.TFalse }
+  id    { Token _ (TokenVar $$) }
+  num   { Token _ (TokenNum $$) }
+  fun   { Token _ TokenFun }
+  '->'  { Token _ TokenArrow }
+  '('   { Token _ TokenLParen }
+  ')'   { Token _ TokenRParen }
+  '['   { Token _ TokenLSquare }
+  ']'   { Token _ TokenRSquare }
+  '{'   { Token _ TokenLBrace }
+  '}'   { Token _ TokenRBrace }
+  '<'   { Token _ TokenLBrack }
+  '>'   { Token _ TokenRBrack }
+  ';'   { Token _ TokenSemi }
+  ':'   { Token _ TokenColon }
+  '!'   { Token _ TokenBang }
+  '.'   { Token _ TokenDot }
+  '|'   { Token _ TokenBar }
+  'r'   { Token _ TokenR }
+  's'   { Token _ TokenS }
+  't'   { Token _ TokenT }
+  ba    { Token _ TokenBA }
+  bb    { Token _ TokenBB }
+  ti    { Token _ TokenTI }
+  abs   { Token _ TokenABS }
+  app   { Token _ TokenAPP }
+  trpl  { Token _ TokenTRPL }
+  let   { Token _ TokenLet }
+  be    { Token _ TokenBe }
+  in    { Token _ TokenIn }
+  trl   { Token _ TokenTrail }
+  int   { Token _ TokenInt }
+  bool  { Token _ TokenBool }
+  true  { Token _ TokenTrue }
+  false { Token _ TokenFalse }
 
 
 %%
@@ -54,16 +60,16 @@ Type      : int                              { T.Int }
           | bool                             { T.Bool }
           | Type '->' Type                   { T.Arrow $1 $3 }
           | '!' Type                         { T.Audited $2 }
-R         : 'r' '(' id ')' '.' Exp           { Reflexivity $3 $6 }
-S         : 's' '(' id ')' '.' Exp           { Symmetry $3 $6 }
-T         : 't' '(' id id ')' '.' Exp        { Transitivity $3 $4 $7}
-BA        : ba '(' id id ')' '.' Exp         { Beta $3 $4 $7 }
-BB        : bb '(' id id ')' '.' Exp         { BetaBox $3 $4 $7 }
-TI        : ti '(' id id ')' '.' Exp         { TrailInspection $3 $4 $7 }
-ABS       : abs '(' id ')' '.' Exp           { Abstraction $3 $6 }
-APP       : app '(' id id ')' '.' Exp        { Application $3 $4 $7 }
-LET       : let '(' id id ')' '.' Exp        { Let $3 $4 $7 }
-TRPL      : trpl '(' id id id id id id id id id id ')' '.' Exp { Replacement $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $15 }
+R         : 'r' '(' id ')' '->' Exp          { Reflexivity $3 $6 }
+S         : 's' '(' id ')' '->' Exp          { Symmetry $3 $6 }
+T         : 't' '(' id id ')' '->' Exp       { Transitivity $3 $4 $7}
+BA        : ba '(' id id ')' '->' Exp        { Beta $3 $4 $7 }
+BB        : bb '(' id id ')' '->' Exp        { BetaBox $3 $4 $7 }
+TI        : ti '(' id id ')' '->' Exp        { TrailInspection $3 $4 $7 }
+ABS       : abs '(' id ')' '->' Exp          { Abstraction $3 $6 }
+APP       : app '(' id id ')' '->' Exp       { Application $3 $4 $7 }
+LET       : let '(' id id ')' '->' Exp       { Let $3 $4 $7 }
+TRPL      : trpl '(' id id id id id id id id id id ')' '->' Exp { Replacement $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $15 }
 Exp       : id                               { Id $1 }
           | num                              { Number $1 }
           | true                             { Boolean True }
@@ -77,37 +83,13 @@ Exp       : id                               { Id $1 }
           | id '[' R ';' S ';' T ';' BA ';' BB ';' TI ';' ABS ';' APP ';' LET ';' TRPL ']' { TrailInspect $1 $3 $5 $7 $9 $11 $13 $15 $17 $19 $21 }
 
 {
+lexwrap :: (Token -> Alex a) -> Alex a
+lexwrap = (alexMonadScan' >>=)
 
-parseError :: [L.Token] -> a
-parseError _ = error "Parse error"
+happyError :: Token -> Alex a
+happyError (Token p t) =
+  alexError' p ("parse error at token '" ++ unLex t ++ "'")
 
-data Program = Program Exp
-  deriving Show
-
-data Exp
-  = Id String
-  | Number Int
-  | Boolean Bool
-  | Brack Exp
-  | Abs String T.Type Exp
-  | App Exp Exp
-  | AuditedVar String String String
-  | AuditedUnit String Exp
-  | AuditedComp String Exp Exp
-  | TrailInspect String TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap
-  | DerivedTerm T.Trail Exp
-  deriving Show
-
-data TrailMap
-  = Reflexivity String Exp
-  | Symmetry String Exp
-  | Transitivity String String Exp
-  | Beta String String Exp
-  | BetaBox String String Exp
-  | TrailInspection String String Exp
-  | Abstraction String Exp
-  | Application String String Exp
-  | Let String String Exp
-  | Replacement String String String String String String String String String String Exp
-  deriving Show
+parseProgram :: FilePath -> String -> Either String Program
+parseProgram = runAlex' parse
 }
