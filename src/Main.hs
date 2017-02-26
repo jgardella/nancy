@@ -48,8 +48,3 @@ main = do
       either print (print . typecheckProgramEmptyEnvs) parseResult
     Evaluate ->
       putStrLn "Evaluate not implemented"
-  --result <- case args of
-  --            []  -> fmap (parseProgram "<stdin>") getContents
-  --            [f] -> fmap (parseProgram f) (readFile f)
-  --            _   -> error "expected max. 1 argument"
-  --either putStrLn print result

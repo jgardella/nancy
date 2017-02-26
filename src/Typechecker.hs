@@ -65,7 +65,7 @@ typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ pEnv eEnv =
         Right (renameTypeTrailVars RenameTrailVarsParams{old=oldTrailVar, new=newTrailVar} t, T.ValidityHypothesis u oldTrailVar newTrailVar)
       t -> Left (printf "Validity variable %s has type %s, should have type Audited\n" u (show t)))
 typecheckExpression (AuditedUnit trailVar exp) _ pEnv eEnv =
-  typecheckExpression exp empty pEnv eEnv
+  typecheckExpression exp empty pEnv (save trailVar (T.Reflexivity $ T.TruthHypothesis T.Int) eEnv)
   & mapRight (\(expType, expProof) -> (T.Box eEnv expProof expType, T.BoxIntroduction eEnv expProof))
 typecheckExpression (AuditedComp u arg body) tEnv pEnv eEnv =
   typecheckExpression arg tEnv pEnv eEnv
