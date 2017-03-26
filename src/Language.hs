@@ -20,12 +20,12 @@ data Exp
   deriving Show
 
 data TrailMap
-  = Reflexivity String Exp
+  = Reflexivity Exp
   | Symmetry String Exp
   | Transitivity String String Exp
-  | Beta String String Exp
-  | BetaBox String String Exp
-  | TrailInspection String String Exp
+  | Beta Exp
+  | BetaBox Exp
+  | TrailInspection Exp
   | Abstraction String Exp
   | Application String String Exp
   | Let String String Exp

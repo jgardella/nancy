@@ -60,12 +60,12 @@ Type      : int                              { T.Int }
           | bool                             { T.Bool }
           | Type '->' Type                   { T.Arrow $1 $3 }
           | '!' Type                         { T.Audited $2 }
-R         : 'r' '(' id ')' '->' Exp          { Reflexivity $3 $6 }
+R         : 'r' '->' Exp                     { Reflexivity $3 }
 S         : 's' '(' id ')' '->' Exp          { Symmetry $3 $6 }
 T         : 't' '(' id id ')' '->' Exp       { Transitivity $3 $4 $7}
-BA        : ba '(' id id ')' '->' Exp        { Beta $3 $4 $7 }
-BB        : bb '(' id id ')' '->' Exp        { BetaBox $3 $4 $7 }
-TI        : ti '(' id id ')' '->' Exp        { TrailInspection $3 $4 $7 }
+BA        : ba '->' Exp                      { Beta $3 }
+BB        : bb '->' Exp                      { BetaBox $3 }
+TI        : ti '->' Exp                      { TrailInspection $3 }
 ABS       : abs '(' id ')' '->' Exp          { Abstraction $3 $6 }
 APP       : app '(' id id ')' '->' Exp       { Application $3 $4 $7 }
 LET       : let '(' id id ')' '->' Exp       { Let $3 $4 $7 }

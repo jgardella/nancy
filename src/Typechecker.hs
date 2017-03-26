@@ -79,12 +79,12 @@ typecheckExpression (AuditedComp u arg body) tEnv pEnv eEnv =
       t -> Left (printf "Audited composition 'be' has type %s, should have Type Box\n" (show t)))
 typecheckExpression
   (TrailInspect trailVar
-    (Language.Reflexivity r1 exp_r)
+    (Language.Reflexivity exp_r)
     (Language.Symmetry s1 exp_s)
     (Language.Transitivity t1 t2 exp_t)
-    (Language.Beta ba1 ba2 exp_ba)
-    (Language.BetaBox bb1 bb2 exp_bb)
-    (Language.TrailInspection ti1 ti2 exp_ti)
+    (Language.Beta exp_ba)
+    (Language.BetaBox exp_bb)
+    (Language.TrailInspection exp_ti)
     (Language.Abstraction abs1 exp_abs)
     (Language.Application app1 app2 exp_app)
     (Language.Let let1 let2 exp_let)
@@ -97,9 +97,9 @@ typecheckExpression
     (rType, rProof) <- typecheckExpression exp_r tEnv empty empty
     (sType, sProof) <- typecheckExpression exp_s (save s1 rType tEnv) empty empty
     (tType, tProof) <- typecheckExpression exp_t (save t2 rType (save t1 rType tEnv)) empty empty
-    (baType, baProof) <- typecheckExpression exp_ba (save ba2 rType (save ba1 rType tEnv)) empty empty
-    (bbType, bbProof) <- typecheckExpression exp_bb (save bb2 rType (save bb1 rType tEnv)) empty empty
-    (tiType, tiProof) <- typecheckExpression exp_ti (save ti1 rType (save t2 rType tEnv)) empty empty
+    (baType, baProof) <- typecheckExpression exp_ba tEnv empty empty
+    (bbType, bbProof) <- typecheckExpression exp_bb tEnv empty empty
+    (tiType, tiProof) <- typecheckExpression exp_ti tEnv empty empty
     (absType, absProof) <- typecheckExpression exp_abs (save abs1 rType tEnv) empty empty
     (appType, appProof) <- typecheckExpression exp_app (save app1 rType (save app2 rType tEnv)) empty empty
     (letType, letProof) <- typecheckExpression exp_let (save let1 rType (save let2 rType tEnv)) empty empty
