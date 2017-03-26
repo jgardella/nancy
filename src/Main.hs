@@ -1,10 +1,14 @@
 module Main(main) where
 
 import Options.Applicative
+import Data.Function((&))
+import Data.Semigroup ((<>))
 import Parser( parseProgram )
 import System.Environment ( getArgs )
 import Typechecker
+import Types
 import qualified Env
+import PreludeExtensions
 
 data Mode = Parse
           | Typecheck
@@ -43,8 +47,13 @@ main = do
     Parse -> do
       result <- fmap (parseProgram $ fileName args) input
       either putStrLn print result
-    Typecheck -> do
-      parseResult <- fmap (parseProgram $ fileName args) input
-      either print (print . typecheckProgramEmptyEnvs) parseResult
+    Typecheck ->
+      input
+      & fmap (parseProgram $ fileName args)
+      >>= (\parseResult ->
+        let typecheckResult = parseResult & bindRight typecheckProgramEmptyEnvs in
+        case typecheckResult of
+          (Left l) -> print l
+          (Right (t, p)) -> ("Type: " ++ pretty t ++ "\nProof: " ++ pretty p) & putStrLn)
     Evaluate ->
       putStrLn "Evaluate not implemented"

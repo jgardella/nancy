@@ -8,19 +8,9 @@ import Types as T
 import Text.Printf
 import Env
 import Util
+import PreludeExtensions
 
 type TypePair = (T.Type, T.Proof)
-
-maybeToEither leftValue maybe =
-  case maybe of
-    Just x -> Right x
-    Nothing -> Left leftValue
-
-bindRight :: (b -> Either a c) -> Either a b -> Either a c
-bindRight f either =
-  case either of
-    Left l -> Left l
-    Right r -> f r
 
 typecheckProgramEmptyEnvs :: Program -> Either String TypePair
 typecheckProgramEmptyEnvs program =
@@ -39,7 +29,7 @@ typecheckExpression (Brack exp) tEnv pEnv eEnv =
   typecheckExpression exp tEnv pEnv eEnv
 typecheckExpression (Id x) tEnv pEnv eEnv =
   load x tEnv
-  & maybeToEither (printf "Truth variable %s not defined\n" x)
+  & maybeToEither (printf "Truth variable %s not defined" x)
   & mapRight (\t -> (t, T.TruthHypothesis t))
 typecheckExpression (Abs x t b) tEnv pEnv eEnv =
   typecheckExpression b (save x t tEnv) pEnv eEnv
@@ -53,17 +43,17 @@ typecheckExpression (App x y) tEnv pEnv eEnv =
         & bindRight (\(yType, yProof) ->
             if yType == l
             then Right (r, T.Application xProof yProof)
-            else Left (printf "Expected type of function '%s' does not match given type '%s'\n" (show l) (show yType)))
+            else Left (printf "Expected type of function '%s' does not match given type '%s'" (pretty l) (pretty yType)))
       t ->
-        Left (printf "Left expression of App '%s' has type %s, should have type Arrow\n" (show x) (show t)))
+        Left (printf "Left expression of App '%s' has type %s, should have type Arrow\n" (show x) (pretty t)))
 typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ pEnv eEnv =
   load u pEnv
-  & maybeToEither (printf "Validity variable %s is not defined\n" u)
+  & maybeToEither (printf "Validity variable %s is not defined" u)
   & bindRight (\validityVar ->
     case validityVar of
       (T.Audited t) ->
         Right (renameTypeTrailVars RenameTrailVarsParams{old=oldTrailVar, new=newTrailVar} t, T.ValidityHypothesis u oldTrailVar newTrailVar)
-      t -> Left (printf "Validity variable %s has type %s, should have type Audited\n" u (show t)))
+      t -> Left (printf "Validity variable %s has type %s, should have type Audited" u (pretty t)))
 typecheckExpression (AuditedUnit trailVar exp) _ pEnv eEnv =
   typecheckExpression exp empty pEnv (save trailVar (T.Reflexivity $ T.TruthHypothesis T.Int) eEnv)
   & mapRight (\(expType, expProof) -> (T.Box eEnv expProof expType, T.BoxIntroduction eEnv expProof))
@@ -76,7 +66,7 @@ typecheckExpression (AuditedComp u arg body) tEnv pEnv eEnv =
         & mapRight (\(bodyType, bodyProof) ->
           let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
           (subsitutedBodyType, T.BoxElimination t bodyProof argProof))
-      t -> Left (printf "Audited composition 'be' has type %s, should have Type Box\n" (show t)))
+      t -> Left (printf "Audited composition 'be' has type %s, should have Type Box" (pretty t)))
 typecheckExpression
   (TrailInspect trailVar
     (Language.Reflexivity exp_r)
