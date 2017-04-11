@@ -128,63 +128,13 @@ subsituteTypeValidityVars params (T.Arrow l r) =
     (subsituteTypeValidityVars params r)
 subsituteTypeValidityVars params (T.Box boxEnv boxP boxT) =
   T.Box
-    (subsituteEnvValidityVars params boxEnv)
+    boxEnv
     (subsituteProofValidityVars params boxP)
     (subsituteTypeValidityVars params boxT)
 subsituteTypeValidityVars params (T.Audited t) =
   T.Audited (subsituteTypeValidityVars params t)
 subsituteTypeValidityVars params (T.TrailReplacement t) =
   T.TrailReplacement (subsituteTypeValidityVars params t)
-
-subsituteEnvValidityVars :: ValidityVarSubParams -> Env Trail -> Env Trail
-subsituteEnvValidityVars params =
-  Map.map (subsituteTrailValidityVars params)
-
-subsituteTrailValidityVars :: ValidityVarSubParams -> Trail -> Trail
-subsituteTrailValidityVars params (T.Reflexivity p) =
-  T.Reflexivity (subsituteProofValidityVars params p)
-subsituteTrailValidityVars params (T.Symmetry e) =
-  T.Symmetry (subsituteTrailValidityVars params e)
-subsituteTrailValidityVars params (T.Transitivity e1 e2) =
-  T.Transitivity
-    (subsituteTrailValidityVars params e1)
-    (subsituteTrailValidityVars params e2)
-subsituteTrailValidityVars params (T.Beta t p1 p2) =
-  T.Beta
-    (subsituteTypeValidityVars params t)
-    (subsituteProofValidityVars params p1)
-    (subsituteProofValidityVars params p2)
-subsituteTrailValidityVars params (T.BetaBox t p1 p2) =
-  T.BetaBox
-    (subsituteTypeValidityVars params t)
-    (subsituteProofValidityVars params p1)
-    (subsituteProofValidityVars params p2)
-subsituteTrailValidityVars params (T.AbsCompat t e) =
-  T.AbsCompat
-    (subsituteTypeValidityVars params t)
-    (subsituteTrailValidityVars params e)
-subsituteTrailValidityVars params (T.AppCompat e1 e2) =
-  T.AppCompat
-    (subsituteTrailValidityVars params e1)
-    (subsituteTrailValidityVars params e2)
-subsituteTrailValidityVars params (T.LetCompat t e1 e2) =
-  T.LetCompat
-    (subsituteTypeValidityVars params t)
-    (subsituteTrailValidityVars params e1)
-    (subsituteTrailValidityVars params e2)
-subsituteTrailValidityVars params
-  (T.TrailInspectionT e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
-  T.TrailInspectionT
-    (subsituteTrailValidityVars params e1)
-    (subsituteTrailValidityVars params e2)
-    (subsituteTrailValidityVars params e3)
-    (subsituteTrailValidityVars params e4)
-    (subsituteTrailValidityVars params e5)
-    (subsituteTrailValidityVars params e6)
-    (subsituteTrailValidityVars params e7)
-    (subsituteTrailValidityVars params e8)
-    (subsituteTrailValidityVars params e9)
-    (subsituteTrailValidityVars params e10)
 
 subsituteProofValidityVars :: ValidityVarSubParams -> Proof -> Proof
 subsituteProofValditiyVars _ (T.TruthHypothesis t) =
@@ -206,14 +156,12 @@ subsituteProofValidityVars
   (T.ValidityHypothesis s1 old new)
    | s1 == u =
     renameProofTrailVars RenameTrailVarsParams{old=old, new=new} p
-    -- is this correct?
    | otherwise =
     T.ValidityHypothesis s1 old new
 subsituteProofValidityVars params (T.BoxIntroduction trailEnv p) =
   T.BoxIntroduction
-   (subsituteEnvValidityVars params trailEnv)
+   trailEnv
    (subsituteProofValidityVars params p)
-  -- todo
 subsituteProofValidityVars params (T.BoxElimination t p1 p2) =
   T.BoxElimination
     t
@@ -233,4 +181,3 @@ subsituteProofValidityVars params
     (subsituteProofValidityVars params p8)
     (subsituteProofValidityVars params p9)
     (subsituteProofValidityVars params p10)
-    -- is this correct?

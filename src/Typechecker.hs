@@ -83,7 +83,6 @@ typecheckExpression
   load trailVar eEnv
   & maybeToEither (printf "Trail variable %s is not defined" trailVar)
   & bindRight (\trail -> do
-    -- todo find initial type, store for all mappings
     (rType, rProof) <- typecheckExpression exp_r tEnv empty empty
     (sType, sProof) <- typecheckExpression exp_s (save s1 rType tEnv) empty empty
     (tType, tProof) <- typecheckExpression exp_t (save t2 rType (save t1 rType tEnv)) empty empty

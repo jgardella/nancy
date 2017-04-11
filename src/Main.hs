@@ -2,7 +2,6 @@ module Main(main) where
 
 import Options.Applicative
 import Data.Function((&))
-import Data.Semigroup ((<>))
 import Parser( parseProgram )
 import System.Environment ( getArgs )
 import Typechecker
