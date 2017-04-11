@@ -1,0 +1,5 @@
+!x
+  let u be
+    !y fun (a:int) -> true
+  in
+    <u; y|x> 3
