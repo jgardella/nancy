@@ -1,7 +1,7 @@
-module Util where
+module AudiComp.Core.Util where
 
-import Types as T
-import Env
+import AudiComp.Core.Types as T
+import AudiComp.Core.Env
 import qualified Data.Map as Map
 
 data ValidityVarSubParams =

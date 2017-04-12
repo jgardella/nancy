@@ -1,11 +1,11 @@
 {
 {-# OPTIONS -w #-}
-module Parser( parseProgram ) where
+module AudiComp.Parser( parseProgram ) where
 
 import Data.Char
-import Lexer
-import Language
-import qualified Types as T
+import AudiComp.Lexer
+import AudiComp.Core.Language
+import qualified AudiComp.Core.Types as T
 }
 
 %name parse

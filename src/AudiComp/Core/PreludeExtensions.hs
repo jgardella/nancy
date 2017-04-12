@@ -1,4 +1,4 @@
-module PreludeExtensions where
+module AudiComp.Core.PreludeExtensions where
 
 maybeToEither leftValue maybe =
   case maybe of

@@ -1,4 +1,4 @@
-module Env where
+module AudiComp.Core.Env where
 
 import qualified Data.Map as Map
 

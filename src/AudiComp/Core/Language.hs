@@ -1,6 +1,6 @@
-module Language where
+module AudiComp.Core.Language where
 
-import qualified Types as T
+import qualified AudiComp.Core.Types as T
 
 data Program = Program Exp
   deriving Show

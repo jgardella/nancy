@@ -1,6 +1,6 @@
-module Types where
+module AudiComp.Core.Types where
 
-import Env
+import AudiComp.Core.Env
 
 class Pretty a where
     pretty :: a -> String
@@ -18,7 +18,7 @@ instance Pretty Type where
   pretty Int = "int"
   pretty Bool = "bool"
   pretty (Arrow l r) = pretty l ++ " -> " ++ pretty r
-  pretty (Box _ _ t) = "[" ++ pretty t ++ "]"
+  pretty (Box _ p t) = "[[" ++ pretty p ++ "]]" ++ pretty t
   pretty (Audited t) = pretty t ++ " audited"
   pretty (TrailReplacement t) = "trl " ++ pretty t
 
@@ -38,7 +38,7 @@ instance Pretty Proof where
   pretty (TruthHypothesis t) = pretty t
   pretty (ConstantInt i) = show i
   pretty (ConstantBool b) = show b
-  pretty (Abstraction t p) = "fun a : " ++ pretty t ++ " -> " ++ pretty p
+  pretty (Abstraction t p) = "fun " ++ pretty t ++ " -> " ++ pretty p
   pretty (Application p1 p2) = pretty p1 ++ " . " ++ pretty p2
   pretty (ValidityHypothesis u oldName newName) = "<" ++ u ++ ";" ++ oldName ++ "/" ++ newName ++ ">"
   pretty (BoxIntroduction _ p) = "SIGMA . " ++ pretty p

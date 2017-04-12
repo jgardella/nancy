@@ -1,14 +1,14 @@
-module Typechecker where
+module AudiComp.Typechecker where
 
 import Data.Function((&))
 import Data.Either.Combinators
-import Parser
-import Language
-import Types as T
+import AudiComp.Parser
+import AudiComp.Core.Language as Language
+import AudiComp.Core.Types as T
 import Text.Printf
-import Env
-import Util
-import PreludeExtensions
+import AudiComp.Core.Env
+import AudiComp.Core.Util
+import AudiComp.Core.PreludeExtensions
 
 type TypePair = (T.Type, T.Proof)
 

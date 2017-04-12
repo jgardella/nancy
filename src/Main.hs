@@ -2,12 +2,13 @@ module Main(main) where
 
 import Options.Applicative
 import Data.Function((&))
-import Parser( parseProgram )
+import Data.Semigroup((<>))
+import AudiComp.Parser( parseProgram )
 import System.Environment ( getArgs )
-import Typechecker
-import Types
-import qualified Env
-import PreludeExtensions
+import AudiComp.Typechecker
+import AudiComp.Core.Types as Types
+import qualified AudiComp.Core.Env as Env
+import AudiComp.Core.PreludeExtensions
 
 data Mode = Parse
           | Typecheck

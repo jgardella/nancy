@@ -1,6 +1,6 @@
 {
 {-# OPTIONS -w  #-}
-module Lexer
+module AudiComp.Lexer
   ( Token(..)
   , AlexPosn(..)
   , TokenClass(..)
