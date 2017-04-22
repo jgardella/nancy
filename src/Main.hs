@@ -6,7 +6,6 @@ import Data.Semigroup((<>))
 import AudiComp.Parser( parseProgram )
 import System.Environment ( getArgs )
 import AudiComp.Typechecker
-import AudiComp.Core.Types as Types
 import qualified AudiComp.Core.Env as Env
 import AudiComp.Core.PreludeExtensions
 

@@ -6,44 +6,44 @@ class Pretty a where
     pretty :: a -> String
 
 data Type
-  = Int
-  | Bool
-  | Arrow Type Type
-  | Box (Env Trail) Proof Type
-  | Audited Type
-  | TrailReplacement Type
+  = IntT
+  | BoolT
+  | ArrowT Type Type
+  | BoxT (Env Trail) Witness Type
+  | AuditedT Type
+  | TrailReplacementT Type
   deriving (Eq, Show)
 
 instance Pretty Type where
-  pretty Int = "int"
-  pretty Bool = "bool"
-  pretty (Arrow l r) = pretty l ++ " -> " ++ pretty r
-  pretty (Box _ p t) = "[[" ++ pretty p ++ "]]" ++ pretty t
-  pretty (Audited t) = pretty t ++ " audited"
-  pretty (TrailReplacement t) = "trl " ++ pretty t
+  pretty IntT = "int"
+  pretty BoolT = "bool"
+  pretty (ArrowT l r) = pretty l ++ " -> " ++ pretty r
+  pretty (BoxT _ p t) = "[[" ++ pretty p ++ "]]" ++ pretty t
+  pretty (AuditedT t) = pretty t ++ " audited"
+  pretty (TrailReplacementT t) = "trl " ++ pretty t
 
-data Proof
-    = TruthHypothesis Type
-    | ConstantInt Int
-    | ConstantBool Bool
-    | Abstraction Type Proof
-    | Application Proof Proof
-    | ValidityHypothesis String String String
-    | BoxIntroduction (Env Trail) Proof
-    | BoxElimination Type Proof Proof
-    | TrailInspectionP String Proof Proof Proof Proof Proof Proof Proof Proof Proof Proof
+data Witness
+    = TruthHypothesisW Type
+    | ConstantIntW Int
+    | ConstantBoolW Bool
+    | AbstractionW Type Witness
+    | ApplicationW Witness Witness
+    | ValidityHypothesisW String String String
+    | BoxIntroductionW (Env Trail) Witness
+    | BoxEliminationW Type Witness Witness
+    | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness Witness
     deriving (Eq, Show)
 
-instance Pretty Proof where
-  pretty (TruthHypothesis t) = pretty t
-  pretty (ConstantInt i) = show i
-  pretty (ConstantBool b) = show b
-  pretty (Abstraction t p) = "fun " ++ pretty t ++ " -> " ++ pretty p
-  pretty (Application p1 p2) = pretty p1 ++ " . " ++ pretty p2
-  pretty (ValidityHypothesis u oldName newName) = "<" ++ u ++ ";" ++ oldName ++ "/" ++ newName ++ ">"
-  pretty (BoxIntroduction _ p) = "SIGMA . " ++ pretty p
-  pretty (BoxElimination t p1 p2) = "LET(u:" ++ pretty t ++ "." ++ pretty p1 ++ "," ++ pretty p2 ++ ")"
-  pretty (TrailInspectionP trail p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+instance Pretty Witness where
+  pretty (TruthHypothesisW t) = pretty t
+  pretty (ConstantIntW i) = show i
+  pretty (ConstantBoolW b) = show b
+  pretty (AbstractionW t p) = "fun " ++ pretty t ++ " -> " ++ pretty p
+  pretty (ApplicationW p1 p2) = pretty p1 ++ " . " ++ pretty p2
+  pretty (ValidityHypothesisW u oldName newName) = "<" ++ u ++ ";" ++ oldName ++ "/" ++ newName ++ ">"
+  pretty (BoxIntroductionW _ p) = "SIGMA . " ++ pretty p
+  pretty (BoxEliminationW t p1 p2) = "LET(u:" ++ pretty t ++ "." ++ pretty p1 ++ "," ++ pretty p2 ++ ")"
+  pretty (TrailInspectionW trail p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
       trail ++ "[\n"
         ++ "r -> " ++ pretty p1 ++ "\n"
         ++ "s -> " ++ pretty p2 ++ "\n"
@@ -58,11 +58,11 @@ instance Pretty Proof where
         ++ "]"
 
 data Trail
-    = Reflexivity Proof
+    = Reflexivity Witness
     | Symmetry Trail
     | Transitivity Trail Trail
-    | Beta Type Proof Proof
-    | BetaBox Type Proof Proof
+    | Beta Type Witness Witness
+    | BetaBox Type Witness Witness
     | AbsCompat Type Trail
     | AppCompat Trail Trail
     | LetCompat Type Trail Trail

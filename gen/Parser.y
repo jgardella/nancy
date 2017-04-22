@@ -5,7 +5,6 @@ module AudiComp.Parser( parseProgram ) where
 import Data.Char
 import AudiComp.Lexer
 import AudiComp.Core.Language
-import qualified AudiComp.Core.Types as T
 }
 
 %name parse
@@ -56,20 +55,20 @@ import qualified AudiComp.Core.Types as T
 %%
 
 Program   : Exp                              { Program $1 }
-Type      : int                              { T.Int }
-          | bool                             { T.Bool }
-          | Type '->' Type                   { T.Arrow $1 $3 }
-          | '!' Type                         { T.Audited $2 }
-R         : 'r' '->' Exp                     { Reflexivity $3 }
-S         : 's' '(' id ')' '->' Exp          { Symmetry $3 $6 }
-T         : 't' '(' id id ')' '->' Exp       { Transitivity $3 $4 $7}
-BA        : ba '->' Exp                      { Beta $3 }
-BB        : bb '->' Exp                      { BetaBox $3 }
-TI        : ti '->' Exp                      { TrailInspection $3 }
-ABS       : abs '(' id ')' '->' Exp          { Abstraction $3 $6 }
-APP       : app '(' id id ')' '->' Exp       { Application $3 $4 $7 }
-LET       : let '(' id id ')' '->' Exp       { Let $3 $4 $7 }
-TRPL      : trpl '(' id id id id id id id id id id ')' '->' Exp { Replacement $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $15 }
+Type      : int                              { IntT }
+          | bool                             { BoolT }
+          | Type '->' Type                   { ArrowT $1 $3 }
+          | '!' Type                         { AuditedT $2 }
+R         : 'r' '->' Exp                     { ReflexivityM $3 }
+S         : 's' '(' id ')' '->' Exp          { SymmetryM $3 $6 }
+T         : 't' '(' id id ')' '->' Exp       { TransitivityM $3 $4 $7}
+BA        : ba '->' Exp                      { BetaM $3 }
+BB        : bb '->' Exp                      { BetaBoxM $3 }
+TI        : ti '->' Exp                      { TrailInspectionM $3 }
+ABS       : abs '(' id ')' '->' Exp          { AbstractionM $3 $6 }
+APP       : app '(' id id ')' '->' Exp       { ApplicationM $3 $4 $7 }
+LET       : let '(' id id ')' '->' Exp       { LetM $3 $4 $7 }
+TRPL      : trpl '(' id id id id id id id id id id ')' '->' Exp { ReplacementM $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $15 }
 Exp       : id                               { Id $1 }
           | num                              { Number $1 }
           | true                             { Boolean True }
