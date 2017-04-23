@@ -17,7 +17,7 @@ instance Pretty Type where
   pPrint IntT = text "int"
   pPrint BoolT = text "bool"
   pPrint (ArrowT l r) = pPrint l <+> text "->" <+> pPrint r
-  pPrint (BoxT _ p t) = text "[" <> pPrint p <> text "]" <> pPrint t
+  pPrint (BoxT e p t) = text "[" <> pPrint e <+> text "." <+> pPrint p <> text "]" <+> pPrint t
   pPrint (AuditedT t) = pPrint t <+> text "audited"
   pPrint (TrailReplacementT t) = text "trl" <+> pPrint t
 
@@ -42,7 +42,7 @@ instance Pretty Witness where
            , nest 2 (pPrint p)]
   pPrint (ApplicationW p1 p2) = pPrint p1 <> text " . " <> pPrint p2
   pPrint (ValidityHypothesisW u oldName newName) = text "<" <> text u <> text ";" <> text oldName <> text "/" <> text newName <> text ">"
-  pPrint (BoxIntroductionW _ p) = text "S ." <+> pPrint p
+  pPrint (BoxIntroductionW e p) = pPrint e <+> text "." <+> pPrint p
   pPrint (BoxEliminationW t p1 p2) =
     vcat [ text "LET("
          , nest 2 (text "u:" <> pPrint t <> text "." <> pPrint p1 <> text ",")
