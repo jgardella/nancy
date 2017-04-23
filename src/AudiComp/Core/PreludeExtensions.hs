@@ -1,8 +1,5 @@
 module AudiComp.Core.PreludeExtensions where
 
-class Pretty a where
-    pretty :: a -> String
-
 maybeToEither leftValue maybe =
   case maybe of
     Just x -> Right x

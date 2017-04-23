@@ -5,15 +5,17 @@ import Data.Either.Combinators
 import AudiComp.Parser
 import AudiComp.Core.Language as L
 import Text.Printf
-import AudiComp.Core.Env
+import AudiComp.Core.Env as E
 import AudiComp.Core.Util
 import AudiComp.Core.PreludeExtensions
+import Text.PrettyPrint
+import Text.PrettyPrint.HughesPJClass
 
 type TypePair = (L.Type, L.Witness)
 
 typecheckProgramEmptyEnvs :: Program -> Either String TypePair
 typecheckProgramEmptyEnvs program =
-  typecheckProgram program empty empty empty
+  typecheckProgram program E.empty E.empty E.empty
 
 typecheckProgram :: Program -> Env L.Type -> Env L.Type -> Env L.Trail -> Either String TypePair
 typecheckProgram (Program exp) =
@@ -27,11 +29,11 @@ typecheckExpression (Boolean b) _ _ _ =
 typecheckExpression (Brack exp) tEnv pEnv eEnv =
   typecheckExpression exp tEnv pEnv eEnv
 typecheckExpression (Id x) tEnv pEnv eEnv =
-  load x tEnv
+  E.load x tEnv
   & maybeToEither (printf "Truth variable %s not defined" x)
   & mapRight (\t -> (t, L.TruthHypothesisW t))
 typecheckExpression (Abs x t b) tEnv pEnv eEnv =
-  typecheckExpression b (save x t tEnv) pEnv eEnv
+  typecheckExpression b (E.save x t tEnv) pEnv eEnv
   & mapRight (\(returnType, returnProof) -> (L.ArrowT t returnType, L.AbstractionW t returnProof))
 typecheckExpression (App x y) tEnv pEnv eEnv =
   typecheckExpression x tEnv pEnv eEnv
@@ -42,30 +44,30 @@ typecheckExpression (App x y) tEnv pEnv eEnv =
         & bindRight (\(yType, yProof) ->
             if yType == l
             then Right (r, L.ApplicationW xProof yProof)
-            else Left (printf "Expected type of function '%s' does not match given type '%s'" (pretty l) (pretty yType)))
+            else Left (printf "Expected type of function '%s' does not match given type '%s'" (prettyShow l) (prettyShow yType)))
       t ->
-        Left (printf "Left expression of App '%s' has type %s, should have type ArrowT\n" (show x) (pretty t)))
+        Left (printf "Left expression of App '%s' has type %s, should have type ArrowT\n" (show x) (prettyShow t)))
 typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ pEnv eEnv =
-  load u pEnv
+  E.load u pEnv
   & maybeToEither (printf "Validity variable %s is not defined" u)
   & bindRight (\validityVar ->
     case validityVar of
       (L.AuditedT t) ->
         Right (renameTypeTrailVars RenameTrailVarsParams{old=oldTrailVar, new=newTrailVar} t, L.ValidityHypothesisW u oldTrailVar newTrailVar)
-      t -> Left (printf "Validity variable %s has type %s, should have type AuditedT" u (pretty t)))
+      t -> Left (printf "Validity variable %s has type %s, should have type AuditedT" u (prettyShow t)))
 typecheckExpression (AuditedUnit trailVar exp) _ pEnv eEnv =
-  typecheckExpression exp empty pEnv (save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
+  typecheckExpression exp E.empty pEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
   & mapRight (\(expType, expProof) -> (L.BoxT eEnv expProof expType, L.BoxIntroductionW eEnv expProof))
 typecheckExpression (AuditedComp u arg body) tEnv pEnv eEnv =
   typecheckExpression arg tEnv pEnv eEnv
   & bindRight (\(argType, argProof) ->
     case argType of
       (L.BoxT trailEnv p t) ->
-        typecheckExpression body tEnv (save u (L.AuditedT t) pEnv) eEnv
+        typecheckExpression body tEnv (E.save u (L.AuditedT t) pEnv) eEnv
         & mapRight (\(bodyType, bodyProof) ->
           let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
           (subsitutedBodyType, L.BoxEliminationW t bodyProof argProof))
-      t -> Left (printf "Audited composition 'be' has type %s, should have Type BoxT" (pretty t)))
+      t -> Left (printf "Audited composition 'be' has type %s, should have Type BoxT" (prettyShow t)))
 typecheckExpression
   (TrailInspect trailVar
     (L.ReflexivityM exp_r)
@@ -79,19 +81,19 @@ typecheckExpression
     (L.LetM let1 let2 exp_let)
     (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
     tEnv pEnv eEnv =
-  load trailVar eEnv
+  E.load trailVar eEnv
   & maybeToEither (printf "Trail variable %s is not defined" trailVar)
   & bindRight (\trail -> do
-    (rType, rProof) <- typecheckExpression exp_r tEnv empty empty
-    (sType, sProof) <- typecheckExpression exp_s (save s1 rType tEnv) empty empty
-    (tType, tProof) <- typecheckExpression exp_t (save t2 rType (save t1 rType tEnv)) empty empty
-    (baType, baProof) <- typecheckExpression exp_ba tEnv empty empty
-    (bbType, bbProof) <- typecheckExpression exp_bb tEnv empty empty
-    (tiType, tiProof) <- typecheckExpression exp_ti tEnv empty empty
-    (absType, absProof) <- typecheckExpression exp_abs (save abs1 rType tEnv) empty empty
-    (appType, appProof) <- typecheckExpression exp_app (save app1 rType (save app2 rType tEnv)) empty empty
-    (letType, letProof) <- typecheckExpression exp_let (save let1 rType (save let2 rType tEnv)) empty empty
-    (eType, eProof) <- typecheckExpression exp_e tEnv empty empty
+    (rType, rProof) <- typecheckExpression exp_r tEnv E.empty E.empty
+    (sType, sProof) <- typecheckExpression exp_s (E.save s1 rType tEnv) E.empty E.empty
+    (tType, tProof) <- typecheckExpression exp_t (E.save t2 rType (E.save t1 rType tEnv)) E.empty E.empty
+    (baType, baProof) <- typecheckExpression exp_ba tEnv E.empty E.empty
+    (bbType, bbProof) <- typecheckExpression exp_bb tEnv E.empty E.empty
+    (tiType, tiProof) <- typecheckExpression exp_ti tEnv E.empty E.empty
+    (absType, absProof) <- typecheckExpression exp_abs (E.save abs1 rType tEnv) E.empty E.empty
+    (appType, appProof) <- typecheckExpression exp_app (E.save app1 rType (E.save app2 rType tEnv)) E.empty E.empty
+    (letType, letProof) <- typecheckExpression exp_let (E.save let1 rType (E.save let2 rType tEnv)) E.empty E.empty
+    (eType, eProof) <- typecheckExpression exp_e tEnv E.empty E.empty
     if allEqual [rType, sType, tType, baType, bbType, tiType, absType, appType, letType, eType] then
       Right (rType, L.TrailInspectionW trailVar rProof sProof tProof baProof bbProof tiProof absProof appProof letProof eProof)
     else Left (printf "All trail mappings should have same type"))

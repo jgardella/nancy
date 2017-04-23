@@ -8,6 +8,7 @@ import System.Environment ( getArgs )
 import AudiComp.Typechecker
 import qualified AudiComp.Core.Env as Env
 import AudiComp.Core.PreludeExtensions
+import Text.PrettyPrint.HughesPJClass( prettyShow )
 
 data Mode = Parse
           | Typecheck
@@ -53,6 +54,6 @@ main = do
         let typecheckResult = parseResult & bindRight typecheckProgramEmptyEnvs in
         case typecheckResult of
           (Left l) -> print l
-          (Right (t, p)) -> ("Type: " ++ pretty t ++ "\nProof: " ++ pretty p) & putStrLn)
+          (Right (t, p)) -> ("Type: \n" ++ prettyShow t ++ "\nProof: \n" ++ prettyShow p) & putStrLn)
     Evaluate ->
       putStrLn "Evaluate not implemented"

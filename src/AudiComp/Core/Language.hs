@@ -1,7 +1,8 @@
 module AudiComp.Core.Language where
 
 import AudiComp.Core.Env
-import AudiComp.Core.PreludeExtensions
+import Text.PrettyPrint
+import Text.PrettyPrint.HughesPJClass
 
 data Type
   = IntT
@@ -13,47 +14,52 @@ data Type
   deriving (Eq, Show)
 
 instance Pretty Type where
-  pretty IntT = "int"
-  pretty BoolT = "bool"
-  pretty (ArrowT l r) = pretty l ++ " -> " ++ pretty r
-  pretty (BoxT _ p t) = "[[" ++ pretty p ++ "]]" ++ pretty t
-  pretty (AuditedT t) = pretty t ++ " audited"
-  pretty (TrailReplacementT t) = "trl " ++ pretty t
+  pPrint IntT = text "int"
+  pPrint BoolT = text "bool"
+  pPrint (ArrowT l r) = pPrint l <+> text "->" <+> pPrint r
+  pPrint (BoxT _ p t) = text "[" <> pPrint p <> text "]" <> pPrint t
+  pPrint (AuditedT t) = pPrint t <+> text "audited"
+  pPrint (TrailReplacementT t) = text "trl" <+> pPrint t
 
 data Witness
-    = TruthHypothesisW Type
-    | ConstantIntW Int
-    | ConstantBoolW Bool
-    | AbstractionW Type Witness
-    | ApplicationW Witness Witness
-    | ValidityHypothesisW String String String
-    | BoxIntroductionW (Env Trail) Witness
-    | BoxEliminationW Type Witness Witness
-    | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness Witness
-    deriving (Eq, Show)
+  = TruthHypothesisW Type
+  | ConstantIntW Int
+  | ConstantBoolW Bool
+  | AbstractionW Type Witness
+  | ApplicationW Witness Witness
+  | ValidityHypothesisW String String String
+  | BoxIntroductionW (Env Trail) Witness
+  | BoxEliminationW Type Witness Witness
+  | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness Witness
+  deriving (Eq, Show)
 
 instance Pretty Witness where
-  pretty (TruthHypothesisW t) = pretty t
-  pretty (ConstantIntW i) = show i
-  pretty (ConstantBoolW b) = show b
-  pretty (AbstractionW t p) = "fun " ++ pretty t ++ " -> " ++ pretty p
-  pretty (ApplicationW p1 p2) = pretty p1 ++ " . " ++ pretty p2
-  pretty (ValidityHypothesisW u oldName newName) = "<" ++ u ++ ";" ++ oldName ++ "/" ++ newName ++ ">"
-  pretty (BoxIntroductionW _ p) = "SIGMA . " ++ pretty p
-  pretty (BoxEliminationW t p1 p2) = "LET(u:" ++ pretty t ++ "." ++ pretty p1 ++ "," ++ pretty p2 ++ ")"
-  pretty (TrailInspectionW trail p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
-      trail ++ "[\n"
-        ++ "r -> " ++ pretty p1 ++ "\n"
-        ++ "s -> " ++ pretty p2 ++ "\n"
-        ++ "t -> " ++ pretty p3 ++ "\n"
-        ++ "ba -> " ++ pretty p4 ++ "\n"
-        ++ "bb -> " ++ pretty p5 ++ "\n"
-        ++ "ti -> " ++ pretty p6 ++ "\n"
-        ++ "abs -> " ++ pretty p7 ++ "\n"
-        ++ "app -> " ++ pretty p8 ++ "\n"
-        ++ "let -> " ++ pretty p9 ++ "\n"
-        ++ "trpl -> " ++ pretty p10 ++ "\n"
-        ++ "]"
+  pPrint (TruthHypothesisW t) = pPrint t
+  pPrint (ConstantIntW i) = text (show i)
+  pPrint (ConstantBoolW b) = text (show b)
+  pPrint (AbstractionW t p) =
+      vcat [ text "fun" <+> pPrint t <+> text "->"
+           , nest 2 (pPrint p)]
+  pPrint (ApplicationW p1 p2) = pPrint p1 <> text " . " <> pPrint p2
+  pPrint (ValidityHypothesisW u oldName newName) = text "<" <> text u <> text ";" <> text oldName <> text "/" <> text newName <> text ">"
+  pPrint (BoxIntroductionW _ p) = text "S ." <+> pPrint p
+  pPrint (BoxEliminationW t p1 p2) =
+    vcat [ text "LET("
+         , nest 2 (text "u:" <> pPrint t <> text "." <> pPrint p1 <> text ",")
+         , nest 2 (pPrint p2 <> text ")")]
+  pPrint (TrailInspectionW trail p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+    vcat [ text (trail ++ "[")
+         , nest 2 (text "r ->" <+> pPrint p1)
+         , nest 2 (text "s ->" <+> pPrint p2)
+         , nest 2 (text "t ->" <+> pPrint p3)
+         , nest 2 (text "ba ->" <+> pPrint p4)
+         , nest 2 (text "bb ->" <+> pPrint p5)
+         , nest 2 (text "ti ->" <+> pPrint p6)
+         , nest 2 (text "abs ->" <+> pPrint p7)
+         , nest 2 (text "app ->" <+> pPrint p8)
+         , nest 2 (text "let ->" <+> pPrint p9)
+         , nest 2 (text "trpl ->" <+> pPrint p10)
+         , text "]"]
 
 data Trail
     = Reflexivity Witness
@@ -67,7 +73,56 @@ data Trail
     | TrailInspectionT Trail Trail Trail Trail Trail Trail Trail Trail Trail Trail
     deriving (Eq, Show)
 
-data Program = Program Exp
+instance Pretty Trail where
+  pPrint (Reflexivity w) = text "r(" <> pPrint w <> text ")"
+  pPrint (Symmetry t) =
+    vcat [ text "s("
+         , nest 2 (pPrint t)
+         , text ")"]
+  pPrint (Transitivity e1 e2) =
+    vcat [ text "t("
+         , nest 2 (pPrint e1 <> text ",")
+         , nest 2 (pPrint e2)
+         , text ")"]
+  pPrint (Beta t w1 w2) =
+    vcat [ text "ba("
+         , nest 2 (text "a:" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
+         , nest 2 (pPrint w2)
+         , text ")"]
+  pPrint (BetaBox t w1 w2) =
+    vcat [ text "bb("
+         , nest 2 (text "u:" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
+         , nest 2 (pPrint w2)
+         , text ")"]
+  pPrint (AbsCompat t e) =
+    vcat [ text "abs("
+         , nest 2 (text "a:" <> pPrint t <+> text "." <> pPrint e)
+         , text ")"]
+  pPrint (AppCompat e1 e2) =
+    vcat [ text "app("
+         , nest 2 (pPrint e1 <> text ",")
+         , nest 2 (pPrint e2)
+         , text ")"]
+  pPrint (LetCompat t e1 e2) =
+    vcat [ text "let("
+         , nest 2 (text "u:" <> pPrint t <+> text "." <> pPrint e1 <> text ",")
+         , nest 2 (pPrint e2)
+         , text ")"]
+  pPrint (TrailInspectionT e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
+    vcat [ text "trpl("
+         , nest 2 (pPrint e1 <> text ",")
+         , nest 2 (pPrint e2 <> text ",")
+         , nest 2 (pPrint e3 <> text ",")
+         , nest 2 (pPrint e4 <> text ",")
+         , nest 2 (pPrint e5 <> text ",")
+         , nest 2 (pPrint e6 <> text ",")
+         , nest 2 (pPrint e7 <> text ",")
+         , nest 2 (pPrint e8 <> text ",")
+         , nest 2 (pPrint e9 <> text ",")
+         , nest 2 (pPrint e10 )
+         , text ")"]
+
+newtype Program = Program Exp
   deriving Show
 
 data Exp
