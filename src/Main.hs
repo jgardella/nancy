@@ -51,9 +51,9 @@ main = do
       input
       & fmap (parseProgram $ fileName args)
       >>= (\parseResult ->
-        let typecheckResult = parseResult & bindRight typecheckProgramEmptyEnvs in
+        let typecheckResult = bindRight typecheckProgramEmptyEnvs parseResult in
         case typecheckResult of
-          (Left l) -> print l
+          (Left l) -> ("Error: " ++ show l) & putStrLn
           (Right (t, p)) -> ("Type: \n" ++ prettyShow t ++ "\nProof: \n" ++ prettyShow p) & putStrLn)
     Evaluate ->
       putStrLn "Evaluate not implemented"

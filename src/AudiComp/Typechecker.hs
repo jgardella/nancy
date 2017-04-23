@@ -6,6 +6,7 @@ import AudiComp.Parser
 import AudiComp.Core.Language as L
 import Text.Printf
 import AudiComp.Core.Env as E
+import AudiComp.Core.Errors as Err
 import AudiComp.Core.Util
 import AudiComp.Core.PreludeExtensions
 import Text.PrettyPrint
@@ -15,13 +16,15 @@ type TypePair = (L.Type, L.Witness)
 
 typecheckProgramEmptyEnvs :: Program -> Either String TypePair
 typecheckProgramEmptyEnvs program =
-  typecheckProgram program E.empty E.empty E.empty
+  case typecheckProgram program E.empty E.empty E.empty of
+    (Right x) -> (Right x)
+    (Left x) -> Left $ prettyShow x
 
-typecheckProgram :: Program -> Env L.Type -> Env L.Type -> Env L.Trail -> Either String TypePair
+typecheckProgram :: Program -> Env L.Type -> Env L.Type -> Env L.Trail -> Either TypecheckerE TypePair
 typecheckProgram (Program exp) =
   typecheckExpression exp
 
-typecheckExpression :: Exp -> Env L.Type -> Env L.Type -> Env L.Trail -> Either String TypePair
+typecheckExpression :: Exp -> Env L.Type -> Env L.Type -> Env L.Trail -> Either TypecheckerE TypePair
 typecheckExpression (Number n) _ _ _ =
   Right (L.IntT, L.ConstantIntW n)
 typecheckExpression (Boolean b) _ _ _ =
@@ -30,7 +33,7 @@ typecheckExpression (Brack exp) tEnv pEnv eEnv =
   typecheckExpression exp tEnv pEnv eEnv
 typecheckExpression (Id x) tEnv pEnv eEnv =
   E.load x tEnv
-  & maybeToEither (printf "Truth variable %s not defined" x)
+  & maybeToEither (Err.TruthVarUndefined x)
   & mapRight (\t -> (t, L.TruthHypothesisW t))
 typecheckExpression (Abs x t b) tEnv pEnv eEnv =
   typecheckExpression b (E.save x t tEnv) pEnv eEnv
@@ -44,17 +47,17 @@ typecheckExpression (App x y) tEnv pEnv eEnv =
         & bindRight (\(yType, yProof) ->
             if yType == l
             then Right (r, L.ApplicationW xProof yProof)
-            else Left (printf "Expected type of function '%s' does not match given type '%s'" (prettyShow l) (prettyShow yType)))
+            else Left (Err.InvalidArgType yType l))
       t ->
-        Left (printf "Left expression of App '%s' has type %s, should have type ArrowT\n" (show x) (prettyShow t)))
+        Left (Err.ExpectedArrow x xType))
 typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ pEnv eEnv =
   E.load u pEnv
-  & maybeToEither (printf "Validity variable %s is not defined" u)
+  & maybeToEither (Err.ValidityVarUndefined u)
   & bindRight (\validityVar ->
     case validityVar of
       (L.AuditedT t) ->
         Right (renameTypeTrailVars RenameTrailVarsParams{old=oldTrailVar, new=newTrailVar} t, L.ValidityHypothesisW u oldTrailVar newTrailVar)
-      t -> Left (printf "Validity variable %s has type %s, should have type AuditedT" u (prettyShow t)))
+      t -> Left (Err.ValidityVarWrongType u validityVar))
 typecheckExpression (AuditedUnit trailVar exp) _ pEnv eEnv =
   typecheckExpression exp E.empty pEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
   & mapRight (\(expType, expProof) -> (L.BoxT eEnv expProof expType, L.BoxIntroductionW eEnv expProof))
@@ -67,7 +70,7 @@ typecheckExpression (AuditedComp u arg body) tEnv pEnv eEnv =
         & mapRight (\(bodyType, bodyProof) ->
           let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
           (subsitutedBodyType, L.BoxEliminationW t bodyProof argProof))
-      t -> Left (printf "Audited composition 'be' has type %s, should have Type BoxT" (prettyShow t)))
+      t -> Left (Err.ExpectedBox argType))
 typecheckExpression
   (TrailInspect trailVar
     (L.ReflexivityM exp_r)
@@ -82,7 +85,7 @@ typecheckExpression
     (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
     tEnv pEnv eEnv =
   E.load trailVar eEnv
-  & maybeToEither (printf "Trail variable %s is not defined" trailVar)
+  & maybeToEither (Err.TrailVarUndefined trailVar)
   & bindRight (\trail -> do
     (rType, rProof) <- typecheckExpression exp_r tEnv E.empty E.empty
     (sType, sProof) <- typecheckExpression exp_s (E.save s1 rType tEnv) E.empty E.empty
@@ -96,4 +99,4 @@ typecheckExpression
     (eType, eProof) <- typecheckExpression exp_e tEnv E.empty E.empty
     if allEqual [rType, sType, tType, baType, bbType, tiType, absType, appType, letType, eType] then
       Right (rType, L.TrailInspectionW trailVar rProof sProof tProof baProof bbProof tiProof absProof appProof letProof eProof)
-    else Left (printf "All trail mappings should have same type"))
+    else Left Err.InconsistentTrailMappings)
