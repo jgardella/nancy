@@ -29,44 +29,48 @@ typecheckExpression (Number n) _ _ _ =
   Right (L.IntT, L.ConstantIntW n)
 typecheckExpression (Boolean b) _ _ _ =
   Right (L.BoolT, L.ConstantBoolW b)
-typecheckExpression (Brack exp) tEnv pEnv eEnv =
-  typecheckExpression exp tEnv pEnv eEnv
-typecheckExpression (Id x) tEnv pEnv eEnv =
+typecheckExpression (Brack exp) tEnv wEnv eEnv =
+  typecheckExpression exp tEnv wEnv eEnv
+typecheckExpression (Id x) tEnv wEnv eEnv =
   E.load x tEnv
   & maybeToEither (Err.TruthVarUndefined x)
   & mapRight (\t -> (t, L.TruthHypothesisW t))
-typecheckExpression (Abs x t b) tEnv pEnv eEnv =
-  typecheckExpression b (E.save x t tEnv) pEnv eEnv
+typecheckExpression (Abs x t b) tEnv wEnv eEnv =
+  typecheckExpression b (E.save x t tEnv) wEnv eEnv
   & mapRight (\(returnType, returnProof) -> (L.ArrowT t returnType, L.AbstractionW t returnProof))
-typecheckExpression (App x y) tEnv pEnv eEnv =
-  typecheckExpression x tEnv pEnv eEnv
+typecheckExpression (App x y) tEnv wEnv eEnv =
+  typecheckExpression x tEnv wEnv eEnv
   & bindRight (\(xType, xProof) ->
     case xType of
       (L.ArrowT l r) ->
-        typecheckExpression y tEnv pEnv eEnv
+        typecheckExpression y tEnv wEnv eEnv
         & bindRight (\(yType, yProof) ->
             if yType == l
             then Right (r, L.ApplicationW xProof yProof)
             else Left (Err.InvalidArgType yType l))
       t ->
         Left (Err.ExpectedArrow x xType))
-typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ pEnv eEnv =
-  E.load u pEnv
+-- mapping from set of oldTrailVar to set of newTrailVar,
+-- check codomain of newTarilVar matches eEnv and domain of
+-- sigma matches trail env in box
+typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ wEnv eEnv =
+  E.load u wEnv
   & maybeToEither (Err.ValidityVarUndefined u)
   & bindRight (\validityVar ->
     case validityVar of
       (L.AuditedT t) ->
         Right (renameTypeTrailVars RenameTrailVarsParams{old=oldTrailVar, new=newTrailVar} t, L.ValidityHypothesisW u oldTrailVar newTrailVar)
       t -> Left (Err.ValidityVarWrongType u validityVar))
-typecheckExpression (AuditedUnit trailVar exp) _ pEnv eEnv =
-  typecheckExpression exp E.empty pEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
+typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv =
+  typecheckExpression exp E.empty wEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
   & mapRight (\(expType, expProof) -> (L.BoxT eEnv expProof expType, L.BoxIntroductionW eEnv expProof))
-typecheckExpression (AuditedComp u arg body) tEnv pEnv eEnv =
-  typecheckExpression arg tEnv pEnv eEnv
+typecheckExpression (AuditedComp u arg body) tEnv wEnv eEnv =
+  typecheckExpression arg tEnv wEnv eEnv
   & bindRight (\(argType, argProof) ->
     case argType of
       (L.BoxT trailEnv p t) ->
-        typecheckExpression body tEnv (E.save u (L.AuditedT t) pEnv) eEnv
+      -- store all of BoxT in validity environment (argType)
+        typecheckExpression body tEnv (E.save u (L.AuditedT t) wEnv) eEnv
         & mapRight (\(bodyType, bodyProof) ->
           let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
           (subsitutedBodyType, L.BoxEliminationW t bodyProof argProof))
@@ -83,7 +87,7 @@ typecheckExpression
     (L.ApplicationM app1 app2 exp_app)
     (L.LetM let1 let2 exp_let)
     (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
-    tEnv pEnv eEnv =
+    tEnv wEnv eEnv =
   E.load trailVar eEnv
   & maybeToEither (Err.TrailVarUndefined trailVar)
   & bindRight (\trail -> do
