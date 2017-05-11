@@ -114,8 +114,6 @@ renameTypeTrailVars params (L.BoxT trailEnv p t) =
     (renameEnvTrailVars params trailEnv)
     (renameWitnessTrailVars params p)
     (renameTypeTrailVars params t)
-renameTypeTrailVars params (L.AuditedT t) =
-  L.AuditedT (renameTypeTrailVars params t)
 renameTypeTrailVars params (L.TrailReplacementT t) =
   L.TrailReplacementT (renameTypeTrailVars params t)
 
@@ -131,8 +129,6 @@ subsituteTypeValidityVars params (L.BoxT boxEnv boxP boxT) =
     boxEnv
     (subsituteWitnessValidityVars params boxP)
     (subsituteTypeValidityVars params boxT)
-subsituteTypeValidityVars params (L.AuditedT t) =
-  L.AuditedT (subsituteTypeValidityVars params t)
 subsituteTypeValidityVars params (L.TrailReplacementT t) =
   L.TrailReplacementT (subsituteTypeValidityVars params t)
 

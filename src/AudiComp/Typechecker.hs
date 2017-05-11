@@ -58,19 +58,18 @@ typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ wEnv eEnv =
   & maybeToEither (Err.ValidityVarUndefined u)
   & bindRight (\validityVar ->
     case validityVar of
-      (L.AuditedT t) ->
+      (L.BoxT trailEnv _ t) ->
         Right (renameTypeTrailVars RenameTrailVarsParams{old=oldTrailVar, new=newTrailVar} t, L.ValidityHypothesisW u oldTrailVar newTrailVar)
       t -> Left (Err.ValidityVarWrongType u validityVar))
 typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv =
   typecheckExpression exp E.empty wEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
-  & mapRight (\(expType, expProof) -> (L.BoxT eEnv expProof expType, L.BoxIntroductionW eEnv expProof))
+  & mapRight (\(expType, expProof) -> (L.BoxT (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv) expProof expType, L.BoxIntroductionW eEnv expProof))
 typecheckExpression (AuditedComp u arg body) tEnv wEnv eEnv =
   typecheckExpression arg tEnv wEnv eEnv
   & bindRight (\(argType, argProof) ->
     case argType of
       (L.BoxT trailEnv p t) ->
-      -- store all of BoxT in validity environment (argType)
-        typecheckExpression body tEnv (E.save u (L.AuditedT t) wEnv) eEnv
+        typecheckExpression body tEnv (E.save u argType wEnv) eEnv
         & mapRight (\(bodyType, bodyProof) ->
           let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
           (subsitutedBodyType, L.BoxEliminationW t bodyProof argProof))

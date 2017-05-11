@@ -58,7 +58,6 @@ Program   : Exp                              { Program $1 }
 Type      : int                              { IntT }
           | bool                             { BoolT }
           | Type '->' Type                   { ArrowT $1 $3 }
-          | '!' Type                         { AuditedT $2 }
 R         : 'r' '->' Exp                     { ReflexivityM $3 }
 S         : 's' '(' id ')' '->' Exp          { SymmetryM $3 $6 }
 T         : 't' '(' id id ')' '->' Exp       { TransitivityM $3 $4 $7}

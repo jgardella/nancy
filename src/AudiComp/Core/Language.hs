@@ -9,7 +9,6 @@ data Type
   | BoolT
   | ArrowT Type Type
   | BoxT (Env Trail) Witness Type
-  | AuditedT Type
   | TrailReplacementT Type
   deriving (Eq, Show)
 
@@ -18,7 +17,6 @@ instance Pretty Type where
   pPrint BoolT = text "bool"
   pPrint (ArrowT l r) = pPrint l <+> text "->" <+> pPrint r
   pPrint (BoxT e p t) = text "[" <> pPrint e <+> text "." <+> pPrint p <> text "]" <+> pPrint t
-  pPrint (AuditedT t) = pPrint t <+> text "audited"
   pPrint (TrailReplacementT t) = text "trl" <+> pPrint t
 
 data Witness
