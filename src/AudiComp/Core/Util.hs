@@ -1,27 +1,26 @@
 module AudiComp.Core.Util where
 
-import AudiComp.Core.Language as L
+import qualified AudiComp.Core.Language as L
 import AudiComp.Core.Env
 import qualified Data.Map as Map
+import Data.List
 
 data ValidityVarSubParams =
   ValidityVarSubParams {
       u :: String
-    , trailEnv :: Env Trail
+    , trailEnv :: Env L.Trail
     , p :: L.Witness
-  }
-
-data RenameTrailVarsParams =
-  RenameTrailVarsParams {
-      old :: String
-    , new :: String
   }
 
 allEqual :: Eq a => [a] -> Bool
 allEqual [] = True
 allEqual (x:xs) = all (== x) xs
 
-renameTrailVars :: RenameTrailVarsParams -> Trail -> Trail
+unzipTrailRenames :: [L.TrailRename] -> ([String], [String])
+unzipTrailRenames = unzip . fmap toPair
+  where toPair L.TrailRename { L.old=old, L.new=new } = (old, new)
+
+renameTrailVars :: [L.TrailRename] -> L.Trail -> L.Trail
 renameTrailVars params (L.Reflexivity p) =
   L.Reflexivity (renameWitnessTrailVars params p)
 renameTrailVars params (L.Symmetry e) =
@@ -54,8 +53,8 @@ renameTrailVars params (L.LetCompat t e1 e2) =
     (renameTrailVars params e1)
     (renameTrailVars params e2)
 renameTrailVars params
-  (TrailInspectionT e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
-  TrailInspectionT
+  (L.TrailInspectionT e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
+  L.TrailInspectionT
     (renameTrailVars params e1)
     (renameTrailVars params e2)
     (renameTrailVars params e3)
@@ -67,11 +66,19 @@ renameTrailVars params
     (renameTrailVars params e9)
     (renameTrailVars params e10)
 
-renameEnvTrailVars :: RenameTrailVarsParams -> Env Trail -> Env Trail
+renameEnvTrailVars :: [L.TrailRename] -> Env L.Trail -> Env L.Trail
 renameEnvTrailVars params =
    Map.map (renameTrailVars params)
 
-renameWitnessTrailVars :: RenameTrailVarsParams -> L.Witness -> L.Witness
+renameTrailVar :: [L.TrailRename] -> String -> String
+renameTrailVar trailRenames oldTrailVar =
+  let matchedRename = find (\L.TrailRename { L.old=old } -> old == oldTrailVar) trailRenames
+  in
+    case matchedRename of
+      Just L.TrailRename { L.new=new } -> new
+      Nothing -> oldTrailVar
+
+renameWitnessTrailVars :: [L.TrailRename] -> L.Witness -> L.Witness
 renameWitnessTrailVars params (L.TruthHypothesisW t) =
   L.TruthHypothesisW (renameTypeTrailVars params t)
 renameWitnessTrailVars _ (L.ConstantIntW n) = L.ConstantIntW n
@@ -80,7 +87,7 @@ renameWitnessTrailVars params (L.AbstractionW t p) =
   L.AbstractionW (renameTypeTrailVars params t) (renameWitnessTrailVars params p)
 renameWitnessTrailVars params (L.ApplicationW p1 p2) =
   L.ApplicationW (renameWitnessTrailVars params p1) (renameWitnessTrailVars params p2)
-renameWitnessTrailVars _ (L.ValidityHypothesisW s1 s2 s3) = L.ValidityHypothesisW s1 s2 s3
+renameWitnessTrailVars _ (L.ValidityHypothesisW s1 s2) = L.ValidityHypothesisW s1 s2
 renameWitnessTrailVars params (L.BoxIntroductionW trailEnv p) =
   L.BoxIntroductionW (renameEnvTrailVars params trailEnv) (renameWitnessTrailVars params p)
 renameWitnessTrailVars params (L.BoxEliminationW t p1 p2) =
@@ -90,7 +97,7 @@ renameWitnessTrailVars params (L.BoxEliminationW t p1 p2) =
     (renameWitnessTrailVars params p2)
 renameWitnessTrailVars params
   (L.TrailInspectionW s p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
-  let newS = (if s == old params then new params else s) in
+  let newS = renameTrailVar params s in
     L.TrailInspectionW
       newS
       (renameWitnessTrailVars params p1)
@@ -104,7 +111,7 @@ renameWitnessTrailVars params
       (renameWitnessTrailVars params p9)
       (renameWitnessTrailVars params p10)
 
-renameTypeTrailVars :: RenameTrailVarsParams -> L.Type -> L.Type
+renameTypeTrailVars :: [L.TrailRename] -> L.Type -> L.Type
 renameTypeTrailVars _ L.IntT = L.IntT
 renameTypeTrailVars _ L.BoolT = L.BoolT
 renameTypeTrailVars params (L.ArrowT l r) =
@@ -117,7 +124,7 @@ renameTypeTrailVars params (L.BoxT trailEnv p t) =
 renameTypeTrailVars params (L.TrailReplacementT t) =
   L.TrailReplacementT (renameTypeTrailVars params t)
 
-subsituteTypeValidityVars :: ValidityVarSubParams -> Type -> Type
+subsituteTypeValidityVars :: ValidityVarSubParams -> L.Type -> L.Type
 subsituteTypeValidityVars _ L.IntT = L.IntT
 subsituteTypeValidityVars _ L.BoolT = L.BoolT
 subsituteTypeValidityVars params (L.ArrowT l r) =
@@ -132,7 +139,7 @@ subsituteTypeValidityVars params (L.BoxT boxEnv boxP boxT) =
 subsituteTypeValidityVars params (L.TrailReplacementT t) =
   L.TrailReplacementT (subsituteTypeValidityVars params t)
 
-subsituteWitnessValidityVars :: ValidityVarSubParams -> Witness -> Witness
+subsituteWitnessValidityVars :: ValidityVarSubParams -> L.Witness -> L.Witness
 subsituteWitnessValditiyVars _ (L.TruthHypothesisW t) =
   L.TruthHypothesisW t
 subsituteWitnessValidityVars _ (L.ConstantIntW n) =
@@ -149,11 +156,11 @@ subsituteWitnessValidityVars params (L.ApplicationW p1 p2) =
     (subsituteWitnessValidityVars params p2)
 subsituteWitnessValidityVars
   ValidityVarSubParams{u=u, p=p, trailEnv=trailEnv}
-  (L.ValidityHypothesisW s1 old new)
+  (L.ValidityHypothesisW s1 trailRenames)
    | s1 == u =
-    renameWitnessTrailVars RenameTrailVarsParams{old=old, new=new} p
+    renameWitnessTrailVars trailRenames p
    | otherwise =
-    L.ValidityHypothesisW s1 old new
+    L.ValidityHypothesisW s1 trailRenames
 subsituteWitnessValidityVars params (L.BoxIntroductionW trailEnv p) =
   L.BoxIntroductionW
    trailEnv

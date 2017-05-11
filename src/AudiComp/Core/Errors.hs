@@ -13,6 +13,8 @@ data TypecheckerE
   | ExpectedBox Type
   | TrailVarUndefined String
   | InconsistentTrailMappings
+  | InvalidRenameDomain [String] [String]
+  | InvalidRenameCodomain [String] [String]
 
 instance Pretty TypecheckerE where
   pPrint (TruthVarUndefined tVar) =
@@ -34,3 +36,11 @@ instance Pretty TypecheckerE where
     text "Trail variable" <+> text tVar <+> text "is not defined"
   pPrint InconsistentTrailMappings =
     text "All trail mappings should have same type"
+  pPrint (InvalidRenameDomain boxTrailVars domain) =
+    vcat [ text "Domain of trail renaming should match box trail variables"
+         , nest 2 (text "domain:" <+> pPrint domain)
+         , nest 2 (text "boxTrailVars:" <+> pPrint boxTrailVars)]
+  pPrint (InvalidRenameCodomain initialTrailVars codomain) =
+    vcat [ text "Codomain of trail renaming should match initial trail variables"
+         , nest 2 (text "codomain:" <+> pPrint codomain)
+         , nest 2 (text "initialTrailVars:" <+> pPrint initialTrailVars)]

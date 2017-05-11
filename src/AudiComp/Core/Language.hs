@@ -25,7 +25,7 @@ data Witness
   | ConstantBoolW Bool
   | AbstractionW Type Witness
   | ApplicationW Witness Witness
-  | ValidityHypothesisW String String String
+  | ValidityHypothesisW String [TrailRename]
   | BoxIntroductionW (Env Trail) Witness
   | BoxEliminationW Type Witness Witness
   | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness Witness
@@ -39,7 +39,7 @@ instance Pretty Witness where
       vcat [ text "fun" <+> pPrint t <+> text "->"
            , nest 2 (pPrint p)]
   pPrint (ApplicationW p1 p2) = pPrint p1 <> text " . " <> pPrint p2
-  pPrint (ValidityHypothesisW u oldName newName) = text "<" <> text u <> text ";" <> text oldName <> text "/" <> text newName <> text ">"
+  pPrint (ValidityHypothesisW u trailRenames) = text "<" <> text u <> text ";" <+> pPrint trailRenames <> text ">"
   pPrint (BoxIntroductionW e p) = pPrint e <+> text "." <+> pPrint p
   pPrint (BoxEliminationW t p1 p2) =
     vcat [ text "LET("
@@ -130,7 +130,7 @@ data Exp
   | Brack Exp
   | Abs String Type Exp
   | App Exp Exp
-  | AuditedVar String String String
+  | AuditedVar [TrailRename] String
   | AuditedUnit String Exp
   | AuditedComp String Exp Exp
   | TrailInspect String TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap
@@ -149,3 +149,12 @@ data TrailMap
   | LetM String String Exp
   | ReplacementM String String String String String String String String String String Exp
   deriving Show
+
+data TrailRename = TrailRename {
+    old :: String
+  , new :: String
+  } deriving (Show, Eq)
+
+instance Pretty TrailRename where
+  pPrint TrailRename { old=old, new=new } =
+    text (old ++ "->" ++ new)

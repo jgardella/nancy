@@ -19,3 +19,6 @@ save = Map.insert
 
 load :: String -> Env v -> Maybe v
 load = Map.lookup
+
+keys :: Env v -> [String]
+keys = Map.keys

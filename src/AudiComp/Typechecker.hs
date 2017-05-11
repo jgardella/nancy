@@ -50,16 +50,23 @@ typecheckExpression (App x y) tEnv wEnv eEnv =
             else Left (Err.InvalidArgType yType l))
       t ->
         Left (Err.ExpectedArrow x xType))
--- mapping from set of oldTrailVar to set of newTrailVar,
--- check codomain of newTarilVar matches eEnv and domain of
--- sigma matches trail env in box
-typecheckExpression (AuditedVar u oldTrailVar newTrailVar) _ wEnv eEnv =
+typecheckExpression (AuditedVar trailRenames u) _ wEnv eEnv =
   E.load u wEnv
   & maybeToEither (Err.ValidityVarUndefined u)
   & bindRight (\validityVar ->
     case validityVar of
       (L.BoxT trailEnv _ t) ->
-        Right (renameTypeTrailVars RenameTrailVarsParams{old=oldTrailVar, new=newTrailVar} t, L.ValidityHypothesisW u oldTrailVar newTrailVar)
+        let initialTrailVars = E.keys eEnv
+            boxTrailVars = E.keys trailEnv
+            (domain, codomain) = unzipTrailRenames trailRenames
+        in
+          if codomain == initialTrailVars then
+            if domain == boxTrailVars then
+              Right (renameTypeTrailVars trailRenames t, L.ValidityHypothesisW u trailRenames)
+            else
+              Left (Err.InvalidRenameDomain boxTrailVars domain)
+          else
+              Left (Err.InvalidRenameCodomain initialTrailVars codomain)
       t -> Left (Err.ValidityVarWrongType u validityVar))
 typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv =
   typecheckExpression exp E.empty wEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
