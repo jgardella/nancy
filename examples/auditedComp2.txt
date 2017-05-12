@@ -5,4 +5,4 @@
     let w be
       !z fun (b:bool) -> 1
     in
-      <x->x | w> (<y->x | u> 3)
+      <z->x | w> (<y->x | u> 3)

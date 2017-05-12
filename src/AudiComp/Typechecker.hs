@@ -70,7 +70,7 @@ typecheckExpression (AuditedVar trailRenames u) _ wEnv eEnv =
       t -> Left (Err.ValidityVarWrongType u validityVar))
 typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv =
   typecheckExpression exp E.empty wEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
-  & mapRight (\(expType, expProof) -> (L.BoxT (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv) expProof expType, L.BoxIntroductionW eEnv expProof))
+  & mapRight (\(expType, expProof) -> (L.BoxT (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW eEnv expProof))
 typecheckExpression (AuditedComp u arg body) tEnv wEnv eEnv =
   typecheckExpression arg tEnv wEnv eEnv
   & bindRight (\(argType, argProof) ->

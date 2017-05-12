@@ -2,4 +2,4 @@
   let u be
     !y fun (a:int) -> true
   in
-    <x->x| u> 3
+    <y->x | u> 3
