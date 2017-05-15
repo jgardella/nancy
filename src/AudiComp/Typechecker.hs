@@ -17,7 +17,7 @@ type TypePair = (L.Type, L.Witness)
 typecheckProgramEmptyEnvs :: Program -> Either String TypePair
 typecheckProgramEmptyEnvs program =
   case typecheckProgram program E.empty E.empty E.empty of
-    (Right x) -> (Right x)
+    (Right x) -> Right x
     (Left x) -> Left $ prettyShow x
 
 typecheckProgram :: Program -> Env L.Type -> Env L.Type -> Env L.Trail -> Either TypecheckerE TypePair
@@ -55,7 +55,7 @@ typecheckExpression (AuditedVar trailRenames u) _ wEnv eEnv =
   & maybeToEither (Err.ValidityVarUndefined u)
   & bindRight (\validityVar ->
     case validityVar of
-      (L.BoxT trailEnv _ t) ->
+      (L.BoxT _ trailEnv _ t) ->
         let initialTrailVars = E.keys eEnv
             boxTrailVars = E.keys trailEnv
             (domain, codomain) = unzipTrailRenames trailRenames
@@ -70,16 +70,16 @@ typecheckExpression (AuditedVar trailRenames u) _ wEnv eEnv =
       t -> Left (Err.ValidityVarWrongType u validityVar))
 typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv =
   typecheckExpression exp E.empty wEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
-  & mapRight (\(expType, expProof) -> (L.BoxT (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW eEnv expProof))
+  & mapRight (\(expType, expProof) -> (L.BoxT trailVar (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW eEnv expProof))
 typecheckExpression (AuditedComp u arg body) tEnv wEnv eEnv =
   typecheckExpression arg tEnv wEnv eEnv
   & bindRight (\(argType, argProof) ->
     case argType of
-      (L.BoxT trailEnv p t) ->
+      (L.BoxT s trailEnv p t) ->
         typecheckExpression body tEnv (E.save u argType wEnv) eEnv
         & mapRight (\(bodyType, bodyProof) ->
           let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
-          (subsitutedBodyType, L.BoxEliminationW t bodyProof argProof))
+          (subsitutedBodyType, L.BoxEliminationW t s bodyProof argProof))
       t -> Left (Err.ExpectedBox argType))
 typecheckExpression
   (TrailInspect trailVar

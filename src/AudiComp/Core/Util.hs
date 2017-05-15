@@ -90,9 +90,10 @@ renameWitnessTrailVars params (L.ApplicationW p1 p2) =
 renameWitnessTrailVars _ (L.ValidityHypothesisW s1 s2) = L.ValidityHypothesisW s1 s2
 renameWitnessTrailVars params (L.BoxIntroductionW trailEnv p) =
   L.BoxIntroductionW (renameEnvTrailVars params trailEnv) (renameWitnessTrailVars params p)
-renameWitnessTrailVars params (L.BoxEliminationW t p1 p2) =
+renameWitnessTrailVars params (L.BoxEliminationW t s p1 p2) =
   L.BoxEliminationW
     (renameTypeTrailVars params t)
+    s
     (renameWitnessTrailVars params p1)
     (renameWitnessTrailVars params p2)
 renameWitnessTrailVars params
@@ -116,8 +117,9 @@ renameTypeTrailVars _ L.IntT = L.IntT
 renameTypeTrailVars _ L.BoolT = L.BoolT
 renameTypeTrailVars params (L.ArrowT l r) =
   L.ArrowT (renameTypeTrailVars params l) (renameTypeTrailVars params r)
-renameTypeTrailVars params (L.BoxT trailEnv p t) =
+renameTypeTrailVars params (L.BoxT s trailEnv p t) =
   L.BoxT
+    s
     (renameEnvTrailVars params trailEnv)
     (renameWitnessTrailVars params p)
     (renameTypeTrailVars params t)
@@ -131,8 +133,9 @@ subsituteTypeValidityVars params (L.ArrowT l r) =
   L.ArrowT
     (subsituteTypeValidityVars params l)
     (subsituteTypeValidityVars params r)
-subsituteTypeValidityVars params (L.BoxT boxEnv boxP boxT) =
+subsituteTypeValidityVars params (L.BoxT s boxEnv boxP boxT) =
   L.BoxT
+    s
     boxEnv
     (subsituteWitnessValidityVars params boxP)
     (subsituteTypeValidityVars params boxT)
@@ -165,9 +168,10 @@ subsituteWitnessValidityVars params (L.BoxIntroductionW trailEnv p) =
   L.BoxIntroductionW
    trailEnv
    (subsituteWitnessValidityVars params p)
-subsituteWitnessValidityVars params (L.BoxEliminationW t p1 p2) =
+subsituteWitnessValidityVars params (L.BoxEliminationW t s p1 p2) =
   L.BoxEliminationW
     t
+    s
     (subsituteWitnessValidityVars params p1)
     (subsituteWitnessValidityVars params p2)
 subsituteWitnessValidityVars params

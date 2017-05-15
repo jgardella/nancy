@@ -8,7 +8,7 @@ data Type
   = IntT
   | BoolT
   | ArrowT Type Type
-  | BoxT (Env Trail) Witness Type
+  | BoxT String (Env Trail) Witness Type
   | TrailReplacementT Type
   deriving (Eq, Show)
 
@@ -16,7 +16,7 @@ instance Pretty Type where
   pPrint IntT = text "int"
   pPrint BoolT = text "bool"
   pPrint (ArrowT l r) = pPrint l <+> text "->" <+> pPrint r
-  pPrint (BoxT e p t) = text "[" <> pPrint e <+> text "." <+> pPrint p <> text "]" <+> pPrint t
+  pPrint (BoxT _ e p t) = text "[" <> pPrint e <+> text "." <+> pPrint p <> text "]" <+> pPrint t
   pPrint (TrailReplacementT t) = text "trl" <+> pPrint t
 
 data Witness
@@ -27,7 +27,7 @@ data Witness
   | ApplicationW Witness Witness
   | ValidityHypothesisW String [TrailRename]
   | BoxIntroductionW (Env Trail) Witness
-  | BoxEliminationW Type Witness Witness
+  | BoxEliminationW Type String Witness Witness
   | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness Witness
   deriving (Eq, Show)
 
@@ -41,9 +41,9 @@ instance Pretty Witness where
   pPrint (ApplicationW p1 p2) = pPrint p1 <> text " . " <> pPrint p2
   pPrint (ValidityHypothesisW u trailRenames) = text "<" <> text u <> text ";" <+> pPrint trailRenames <> text ">"
   pPrint (BoxIntroductionW e p) = pPrint e <+> text "." <+> pPrint p
-  pPrint (BoxEliminationW t p1 p2) =
+  pPrint (BoxEliminationW t s p1 p2) =
     vcat [ text "LET("
-         , nest 2 (text "u:" <> pPrint t <> text "." <> pPrint p1 <> text ",")
+         , nest 2 (text "u:" <> pPrint t <> text "[" <> text s <> text "]" <+> text "." <> pPrint p1 <> text ",")
          , nest 2 (pPrint p2 <> text ")")]
   pPrint (TrailInspectionW trail p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
     vcat [ text (trail ++ "[")
