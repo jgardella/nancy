@@ -2,12 +2,10 @@ module Main(main) where
 
 import Options.Applicative
 import Data.Function((&))
-import Data.Semigroup((<>))
 import AudiComp.Parser( parseProgram )
 import System.Environment ( getArgs )
 import AudiComp.Typechecker
 import qualified AudiComp.Core.Env as Env
-import AudiComp.Core.PreludeExtensions
 import Text.PrettyPrint.HughesPJClass( prettyShow )
 
 data Mode = Parse
@@ -51,9 +49,9 @@ main = do
       input
       & fmap (parseProgram $ fileName args)
       >>= (\parseResult ->
-        let typecheckResult = bindRight typecheckProgramEmptyEnvs parseResult in
-        case typecheckResult of
-          (Left l) -> ("Error: " ++ show l) & putStrLn
-          (Right (t, p)) -> ("Type: \n" ++ prettyShow t ++ "\nProof: \n" ++ prettyShow p) & putStrLn)
+        let typecheckResult = parseResult >>= typecheckProgramEmptyEnvs in
+          case typecheckResult of
+            (Left l) -> ("Error: " ++ show l) & putStrLn
+            (Right (t, p)) -> ("Type: \n" ++ prettyShow t ++ "\nProof: \n" ++ prettyShow p) & putStrLn)
     Evaluate ->
       putStrLn "Evaluate not implemented"

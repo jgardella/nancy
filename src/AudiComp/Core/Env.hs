@@ -20,5 +20,11 @@ save = Map.insert
 load :: String -> Env v -> Maybe v
 load = Map.lookup
 
+loadE :: String -> e -> Env v -> Either e v
+loadE s e env =
+  case Map.lookup s env of
+    (Just v) -> Right v
+    Nothing -> Left e
+
 keys :: Env v -> [String]
 keys = Map.keys
