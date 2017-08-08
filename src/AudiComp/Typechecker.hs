@@ -63,8 +63,9 @@ typecheckExpression (AuditedVar trailRenames u) _ wEnv eEnv = do
             Left (Err.InvalidRenameCodomain initialTrailVars codomain)
     t -> Left (Err.ValidityVarWrongType u validityVar)
 typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv = do
-  (expType, expProof) <- typecheckExpression exp E.empty wEnv (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) eEnv)
-  Right (L.BoxT trailVar (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW eEnv expProof)
+  let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty
+  (expType, expProof) <- typecheckExpression exp E.empty wEnv newTrailEnv
+  Right (L.BoxT trailVar (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW newTrailEnv expProof)
 typecheckExpression (AuditedComp u arg body) tEnv wEnv eEnv = do
   (argType, argProof) <- typecheckExpression arg tEnv wEnv eEnv
   case argType of
