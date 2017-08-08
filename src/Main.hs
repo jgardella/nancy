@@ -6,7 +6,7 @@ import AudiComp.Parser( parseProgram )
 import System.Environment ( getArgs )
 import AudiComp.Typechecker
 import qualified AudiComp.Core.Env as Env
-import Text.PrettyPrint.HughesPJClass( prettyShow )
+import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
 data Mode = Parse
           | Typecheck
@@ -15,6 +15,7 @@ data Mode = Parse
 
 data Args = Args
   { mode :: Mode
+  , pretty :: Bool
   , fileName :: String }
 
 parseMode :: Parser Mode
@@ -24,9 +25,15 @@ parseMode = option auto
             <> metavar "MODE"
             <> value Typecheck )
 
+parsePretty :: Parser Bool
+parsePretty = switch
+              ( long "pretty"
+              <> short 'p' )
+
 parseArgs :: Parser Args
 parseArgs = Args
          <$> parseMode
+         <*> parsePretty
          <*> argument str (metavar "FILE" <> value "<stdin>")
 
 opts :: ParserInfo Args
@@ -34,6 +41,13 @@ opts = info (parseArgs <**> helper)
   ( fullDesc
  <> progDesc "Interpreter for Audited Computation Language"
  <> header "Audited Computation Language Interpreter" )
+
+smartShow :: (Show a, Pretty a) => Args -> a -> String
+smartShow args a =
+  if pretty args then
+    prettyShow a
+  else
+    show a
 
 main :: IO ()
 main = do
@@ -52,6 +66,6 @@ main = do
         let typecheckResult = parseResult >>= typecheckProgramEmptyEnvs in
           case typecheckResult of
             (Left l) -> ("Error: " ++ show l) & putStrLn
-            (Right (t, p)) -> ("Type: \n" ++ prettyShow t ++ "\nProof: \n" ++ prettyShow p) & putStrLn)
+            (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn)
     Evaluate ->
       putStrLn "Evaluate not implemented"
