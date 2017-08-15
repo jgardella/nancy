@@ -158,3 +158,8 @@ data TrailRename = TrailRename {
 instance Pretty TrailRename where
   pPrint TrailRename { old=old, new=new } =
     text (old ++ "->" ++ new)
+
+data Value
+  = IntV Int
+  | BoolV Bool
+  | ArrowV (Env Value) (Env Witness) (Env Trail) String Exp
