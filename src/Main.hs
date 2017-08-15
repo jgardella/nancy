@@ -2,6 +2,7 @@ module Main(main) where
 
 import Options.Applicative
 import Data.Function((&))
+import Data.Semigroup((<>))
 import AudiComp.Parser( parseProgram )
 import System.Environment ( getArgs )
 import AudiComp.Typechecker
