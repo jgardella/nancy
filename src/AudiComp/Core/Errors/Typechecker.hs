@@ -1,4 +1,4 @@
-module AudiComp.Core.Errors where
+module AudiComp.Core.Errors.Typechecker where
 
 import AudiComp.Core.Language
 import Text.PrettyPrint

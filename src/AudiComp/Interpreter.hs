@@ -4,6 +4,7 @@ import AudiComp.Core.Errors
 import AudiComp.Core.Language as L
 import Text.Printf
 import AudiComp.Core.Env as E
+import AudiComp.Core.Errors.Interpreter as Err
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
@@ -15,11 +16,11 @@ interpretProgramEmptyEnvs program =
     (Right x) -> Right x
     (Left x) -> Left $ prettyShow x
 
-interpretProgram :: Program -> Env L.Value -> Env L.Witness -> Env L.Trail -> Either String ValuePair
+interpretProgram :: Program -> Env L.Value -> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
 interpretProgram (Program exp) =
   interpretExpression exp
 
-interpretExpression :: Exp -> Env L.Value -> Env L.Witness -> Env L.Trail -> Either String ValuePair
+interpretExpression :: Exp -> Env L.Value -> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
 interpretExpression (Number n) _ _ _ =
   Right (IntV n, L.ConstantIntW n)
 interpretExpression (Boolean b) _ _ _ =
@@ -27,7 +28,7 @@ interpretExpression (Boolean b) _ _ _ =
 interpretExpression (Brack exp) tEnv wEnv eEnv =
   interpretExpression exp tEnv wEnv eEnv
 interpretExpression (Id x) tEnv wEnv eEnv = do
-  v <- E.loadE x "Variable not found" tEnv
+  v <- E.loadE x (Err.TruthVarUndefined x) tEnv
   Right (v, L.TruthHypothesisW v)
 interpretExpression (Abs x t b) tEnv wEnv eEnv =
   Right (ArrowV tEnv wEnv eEnv x b, L.AbstractionW t ???)

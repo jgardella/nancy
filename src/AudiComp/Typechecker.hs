@@ -6,7 +6,7 @@ import AudiComp.Parser
 import AudiComp.Core.Language as L
 import Text.Printf
 import AudiComp.Core.Env as E
-import AudiComp.Core.Errors as Err
+import AudiComp.Core.Errors.Typechecker as Err
 import AudiComp.Core.Util
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
