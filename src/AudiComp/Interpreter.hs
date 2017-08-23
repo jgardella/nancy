@@ -1,14 +1,12 @@
 module AudiComp.Interpreter where
 
-import AudiComp.Core.Errors
 import AudiComp.Core.Language as L
 import Text.Printf
+import AudiComp.Core.Util
 import AudiComp.Core.Env as E
 import AudiComp.Core.Errors.Interpreter as Err
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
-
-type ValuePair = (L.Value, L.Witness)
 
 interpretProgramEmptyEnvs :: Program -> Either String ValuePair
 interpretProgramEmptyEnvs program =
@@ -16,29 +14,29 @@ interpretProgramEmptyEnvs program =
     (Right x) -> Right x
     (Left x) -> Left $ prettyShow x
 
-interpretProgram :: Program -> Env L.Value -> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
+interpretProgram :: Program -> Env ValuePair-> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
 interpretProgram (Program exp) =
   interpretExpression exp
 
-interpretExpression :: Exp -> Env L.Value -> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
+interpretExpression :: Exp -> Env ValuePair -> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
 interpretExpression (Number n) _ _ _ =
   Right (IntV n, L.ConstantIntW n)
 interpretExpression (Boolean b) _ _ _ =
   Right (BoolV b, L.ConstantBoolW b)
 interpretExpression (Brack exp) tEnv wEnv eEnv =
   interpretExpression exp tEnv wEnv eEnv
-interpretExpression (Id x) tEnv wEnv eEnv = do
-  v <- E.loadE x (Err.TruthVarUndefined x) tEnv
-  Right (v, L.TruthHypothesisW v)
-interpretExpression (Abs x t b) tEnv wEnv eEnv =
-  Right (ArrowV tEnv wEnv eEnv x b, L.AbstractionW t ???)
+interpretExpression (Id x) tEnv wEnv eEnv =
+  E.loadE x (Err.TruthVarUndefined x) tEnv
+interpretExpression (Abs x t b) tEnv wEnv eEnv = do
+  witness <- computeWitness (Abs x t b) tEnv wEnv eEnv
+  Right (ArrowV tEnv wEnv eEnv x b, L.AbstractionW t witness)
 interpretExpression (App x y) tEnv wEnv eEnv =
   undefined
 interpretExpression (AuditedVar trailRenames u) _ wEnv eEnv =
   undefined
 interpretExpression (AuditedUnit trailVar exp) _ wEnv eEnv =
   undefined
-interpretExpression (AuditedComp u arg body) tEnv wEnv eEnv =
+interpretExpression (AuditedComp u typ arg body) tEnv wEnv eEnv =
   undefined
 interpretExpression
   (TrailInspect trailVar

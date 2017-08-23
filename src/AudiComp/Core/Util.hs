@@ -1,6 +1,7 @@
 module AudiComp.Core.Util where
 
 import qualified AudiComp.Core.Language as L
+import AudiComp.Core.Errors.Interpreter as Err
 import AudiComp.Core.Env
 import qualified Data.Map as Map
 import Data.List
@@ -34,8 +35,9 @@ renameTrailVars params (L.Beta t p1 p2) =
     (renameTypeTrailVars params t)
     (renameWitnessTrailVars params p1)
     (renameWitnessTrailVars params p2)
-renameTrailVars params (L.BetaBox t p1 p2) =
+renameTrailVars params (L.BetaBox u t p1 p2) =
   L.BetaBox
+    u
     (renameTypeTrailVars params t)
     (renameWitnessTrailVars params p1)
     (renameWitnessTrailVars params p2)
@@ -47,14 +49,16 @@ renameTrailVars params (L.AppCompat e1 e2) =
   L.AppCompat
     (renameTrailVars params e1)
     (renameTrailVars params e2)
-renameTrailVars params (L.LetCompat t e1 e2) =
+renameTrailVars params (L.LetCompat u t e1 e2) =
   L.LetCompat
+    u
     (renameTypeTrailVars params t)
     (renameTrailVars params e1)
     (renameTrailVars params e2)
 renameTrailVars params
-  (L.TrailInspectionT e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
+  (L.TrailInspectionT s e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
   L.TrailInspectionT
+    s
     (renameTrailVars params e1)
     (renameTrailVars params e2)
     (renameTrailVars params e3)
@@ -90,10 +94,10 @@ renameWitnessTrailVars params (L.ApplicationW p1 p2) =
 renameWitnessTrailVars _ (L.ValidityHypothesisW s1 s2) = L.ValidityHypothesisW s1 s2
 renameWitnessTrailVars params (L.BoxIntroductionW trailEnv p) =
   L.BoxIntroductionW (renameEnvTrailVars params trailEnv) (renameWitnessTrailVars params p)
-renameWitnessTrailVars params (L.BoxEliminationW t s p1 p2) =
+renameWitnessTrailVars params (L.BoxEliminationW u t p1 p2) =
   L.BoxEliminationW
+    u
     (renameTypeTrailVars params t)
-    s
     (renameWitnessTrailVars params p1)
     (renameWitnessTrailVars params p2)
 renameWitnessTrailVars params
@@ -168,10 +172,10 @@ subsituteWitnessValidityVars params (L.BoxIntroductionW trailEnv p) =
   L.BoxIntroductionW
    trailEnv
    (subsituteWitnessValidityVars params p)
-subsituteWitnessValidityVars params (L.BoxEliminationW t s p1 p2) =
+subsituteWitnessValidityVars params (L.BoxEliminationW u t p1 p2) =
   L.BoxEliminationW
+    u
     t
-    s
     (subsituteWitnessValidityVars params p1)
     (subsituteWitnessValidityVars params p2)
 subsituteWitnessValidityVars params
@@ -188,3 +192,107 @@ subsituteWitnessValidityVars params
     (subsituteWitnessValidityVars params p8)
     (subsituteWitnessValidityVars params p9)
     (subsituteWitnessValidityVars params p10)
+
+getSource :: L.Trail -> L.Witness
+getSource (L.Reflexivity witness) =
+  witness
+getSource (L.Symmetry trl) =
+  getSource trl
+getSource (L.Transitivity trl1 trl2) =
+  getSource trl1
+getSource (L.Beta typ wit1 wit2) =
+  L.ApplicationW (L.AbstractionW typ wit1) wit2
+getSource (L.BetaBox u typ wit1 wit2) =
+  L.BoxEliminationW u typ wit1 wit2
+getSource (L.AbsCompat typ trl) =
+  L.AbstractionW typ (getSource trl)
+getSource (L.AppCompat trl1 trl2) =
+  L.ApplicationW (getSource trl1) (getSource trl2)
+getSource (L.LetCompat u typ trl1 trl2) =
+  L.BoxEliminationW u typ (getSource trl1) (getSource trl2)
+getSource (L.TrailInspectionT
+    s
+    rTrl
+    sTrl
+    tTrl
+    baTrl
+    bbTrl
+    tiTrl
+    absTrl
+    appTrl
+    letTrl
+    trplTrl) =
+  L.TrailInspectionW
+    s
+    (getSource rTrl)
+    (getSource sTrl)
+    (getSource tTrl)
+    (getSource baTrl)
+    (getSource bbTrl)
+    (getSource tiTrl)
+    (getSource absTrl)
+    (getSource appTrl)
+    (getSource letTrl)
+    (getSource trplTrl)
+
+computeWitness :: L.Exp -> Env L.ValuePair -> Env L.Witness -> Env L.Trail -> Either InterpreterE L.Witness
+computeWitness (L.Number n) _ _ _ =
+  Right $ L.ConstantIntW n
+computeWitness (L.Boolean b) _ _ _ =
+  Right $L.ConstantBoolW b
+computeWitness (L.Brack exp) tEnv wEnv eEnv =
+  computeWitness exp tEnv wEnv eEnv
+computeWitness (L.Id x) tEnv wEnv eEnv = do
+  (_, w) <- loadE x (Err.TruthVarUndefined x) tEnv
+  Right w
+computeWitness (L.Abs x t b) tEnv wEnv eEnv = do
+  bodyWitness <- computeWitness b tEnv wEnv eEnv
+  Right $ L.AbstractionW t bodyWitness
+computeWitness (L.App x y) tEnv wEnv eEnv = do
+  xWitness <- computeWitness x tEnv wEnv eEnv
+  yWitness <- computeWitness y tEnv wEnv eEnv
+  Right $ L.ApplicationW xWitness yWitness
+computeWitness (L.AuditedVar trailRenames u) _ wEnv eEnv =
+  Right $ L.ValidityHypothesisW u trailRenames
+computeWitness (L.AuditedUnit trailVar exp) _ wEnv eEnv = do
+  trail <- loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
+  Right $ L.BoxIntroductionW eEnv (getSource trail)
+computeWitness (L.AuditedComp u typ arg body) tEnv wEnv eEnv = do
+  argWitness <- computeWitness arg tEnv wEnv eEnv
+  bodyWitness <- computeWitness body tEnv wEnv eEnv
+  Right $ L.BoxEliminationW u typ argWitness bodyWitness
+computeWitness
+  (L.TrailInspect trailVar
+    (L.ReflexivityM exp_r)
+    (L.SymmetryM s1 exp_s)
+    (L.TransitivityM t1 t2 exp_t)
+    (L.BetaM exp_ba)
+    (L.BetaBoxM exp_bb)
+    (L.TrailInspectionM exp_ti)
+    (L.AbstractionM abs1 exp_abs)
+    (L.ApplicationM app1 app2 exp_app)
+    (L.LetM let1 let2 exp_let)
+    (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
+    tEnv wEnv eEnv = do
+  rWitness <- computeWitness exp_r tEnv wEnv eEnv
+  sWitness <- computeWitness exp_s tEnv wEnv eEnv
+  tWitness <- computeWitness exp_t tEnv wEnv eEnv
+  baWitness <- computeWitness exp_ba tEnv wEnv eEnv
+  bbWitness <- computeWitness exp_bb tEnv wEnv eEnv
+  tiWitness <- computeWitness exp_ti tEnv wEnv eEnv
+  absWitness <- computeWitness exp_abs tEnv wEnv eEnv
+  appWitness <- computeWitness exp_app tEnv wEnv eEnv
+  letWitness <- computeWitness exp_let tEnv wEnv eEnv
+  trplWitness <- computeWitness exp_e tEnv wEnv eEnv
+  Right $ L.TrailInspectionW
+    trailVar
+    rWitness
+    sWitness
+    tWitness
+    baWitness
+    bbWitness
+    tiWitness
+    absWitness
+    appWitness
+    letWitness
+    trplWitness

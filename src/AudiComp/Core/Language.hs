@@ -27,7 +27,7 @@ data Witness
   | ApplicationW Witness Witness
   | ValidityHypothesisW String [TrailRename]
   | BoxIntroductionW (Env Trail) Witness
-  | BoxEliminationW Type String Witness Witness
+  | BoxEliminationW String Type Witness Witness
   | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness Witness
   deriving (Eq, Show)
 
@@ -41,34 +41,32 @@ instance Pretty Witness where
   pPrint (ApplicationW p1 p2) = pPrint p1 <> text " . " <> pPrint p2
   pPrint (ValidityHypothesisW u trailRenames) = text "<" <> text u <> text ";" <+> pPrint trailRenames <> text ">"
   pPrint (BoxIntroductionW e p) = pPrint e <+> text "." <+> pPrint p
-  pPrint (BoxEliminationW t s p1 p2) =
+  pPrint (BoxEliminationW u t p1 p2) =
     vcat [ text "LET("
-         , nest 2 (text "u:" <> pPrint t <> text "[" <> text s <> text "]" <+> text "." <> pPrint p1 <> text ",")
+         , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint p1 <> text ",")
          , nest 2 (pPrint p2 <> text ")")]
-  pPrint (TrailInspectionW trail p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
-    vcat [ text (trail ++ "[")
-         , nest 2 (text "r ->" <+> pPrint p1)
-         , nest 2 (text "s ->" <+> pPrint p2)
-         , nest 2 (text "t ->" <+> pPrint p3)
-         , nest 2 (text "ba ->" <+> pPrint p4)
-         , nest 2 (text "bb ->" <+> pPrint p5)
-         , nest 2 (text "ti ->" <+> pPrint p6)
-         , nest 2 (text "abs ->" <+> pPrint p7)
-         , nest 2 (text "app ->" <+> pPrint p8)
-         , nest 2 (text "let ->" <+> pPrint p9)
-         , nest 2 (text "trpl ->" <+> pPrint p10)
-         , text "]"]
+  pPrint (TrailInspectionW s p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+    vcat [ text "r ->" <+> pPrint p1
+         , text "s ->" <+> pPrint p2
+         , text "t ->" <+> pPrint p3
+         , text "ba ->" <+> pPrint p4
+         , text "bb ->" <+> pPrint p5
+         , text "ti ->" <+> pPrint p6
+         , text "abs ->" <+> pPrint p7
+         , text "app ->" <+> pPrint p8
+         , text "let ->" <+> pPrint p9
+         , text "trpl ->" <+> pPrint p10 ]
 
 data Trail
     = Reflexivity Witness
     | Symmetry Trail
     | Transitivity Trail Trail
     | Beta Type Witness Witness
-    | BetaBox Type Witness Witness
+    | BetaBox String Type Witness Witness
     | AbsCompat Type Trail
     | AppCompat Trail Trail
-    | LetCompat Type Trail Trail
-    | TrailInspectionT Trail Trail Trail Trail Trail Trail Trail Trail Trail Trail
+    | LetCompat String Type Trail Trail
+    | TrailInspectionT String Trail Trail Trail Trail Trail Trail Trail Trail Trail Trail
     deriving (Eq, Show)
 
 instance Pretty Trail where
@@ -87,9 +85,9 @@ instance Pretty Trail where
          , nest 2 (text "a:" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
          , nest 2 (pPrint w2)
          , text ")"]
-  pPrint (BetaBox t w1 w2) =
+  pPrint (BetaBox u t w1 w2) =
     vcat [ text "bb("
-         , nest 2 (text "u:" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
+         , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
          , nest 2 (pPrint w2)
          , text ")"]
   pPrint (AbsCompat t e) =
@@ -101,12 +99,12 @@ instance Pretty Trail where
          , nest 2 (pPrint e1 <> text ",")
          , nest 2 (pPrint e2)
          , text ")"]
-  pPrint (LetCompat t e1 e2) =
+  pPrint (LetCompat u t e1 e2) =
     vcat [ text "let("
-         , nest 2 (text "u:" <> pPrint t <+> text "." <> pPrint e1 <> text ",")
+         , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint e1 <> text ",")
          , nest 2 (pPrint e2)
          , text ")"]
-  pPrint (TrailInspectionT e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
+  pPrint (TrailInspectionT s e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
     vcat [ text "trpl("
          , nest 2 (pPrint e1 <> text ",")
          , nest 2 (pPrint e2 <> text ",")
@@ -132,7 +130,7 @@ data Exp
   | App Exp Exp
   | AuditedVar [TrailRename] String
   | AuditedUnit String Exp
-  | AuditedComp String Exp Exp
+  | AuditedComp String Type Exp Exp
   | TrailInspect String TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap
   | DerivedTerm Trail Exp
   deriving Show
@@ -162,4 +160,6 @@ instance Pretty TrailRename where
 data Value
   = IntV Int
   | BoolV Bool
-  | ArrowV (Env Value) (Env Witness) (Env Trail) String Exp
+  | ArrowV (Env ValuePair) (Env Witness) (Env Trail) String Exp
+
+type ValuePair = (Value, Witness)

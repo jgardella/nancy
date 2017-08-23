@@ -66,13 +66,13 @@ typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv = do
   let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty
   (expType, expProof) <- typecheckExpression exp E.empty wEnv newTrailEnv
   Right (L.BoxT trailVar (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW newTrailEnv expProof)
-typecheckExpression (AuditedComp u arg body) tEnv wEnv eEnv = do
+typecheckExpression (AuditedComp u typ arg body) tEnv wEnv eEnv = do
   (argType, argProof) <- typecheckExpression arg tEnv wEnv eEnv
   case argType of
     (L.BoxT s trailEnv p t) -> do
       (bodyType, bodyProof) <- typecheckExpression body tEnv (E.save u argType wEnv) eEnv
       let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
-        Right (subsitutedBodyType, L.BoxEliminationW t s bodyProof argProof)
+        Right (subsitutedBodyType, L.BoxEliminationW s t bodyProof argProof)
     t -> Left (Err.ExpectedBox argType)
 typecheckExpression
   (TrailInspect trailVar
