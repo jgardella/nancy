@@ -5,38 +5,48 @@ import Text.Printf
 import AudiComp.Core.Util
 import AudiComp.Core.Env as E
 import AudiComp.Core.Errors.Interpreter as Err
+import Control.Monad.Identity
+import Control.Monad.Except
+import Control.Monad.Reader
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
+type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE Identity) ValuePair
+
+runInterpretM :: InterpretEnv -> InterpretM -> Either Err.InterpreterE ValuePair
+runInterpretM env m = runIdentity (runExceptT (runReaderT m env))
+
 interpretProgramEmptyEnvs :: Program -> Either String ValuePair
 interpretProgramEmptyEnvs program =
-  case interpretProgram program E.empty E.empty E.empty of
+  case interpretProgram (E.empty, E.empty, E.empty) program of
     (Right x) -> Right x
     (Left x) -> Left $ prettyShow x
 
-interpretProgram :: Program -> Env ValuePair-> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
-interpretProgram (Program exp) =
-  interpretExpression exp
+interpretProgram :: InterpretEnv -> Program -> Either InterpreterE ValuePair
+interpretProgram env (Program exp) =
+  runInterpretM env (interpretExpression exp)
 
-interpretExpression :: Exp -> Env ValuePair -> Env L.Witness -> Env L.Trail -> Either InterpreterE ValuePair
-interpretExpression (Number n) _ _ _ =
-  Right (IntV n, L.ConstantIntW n)
-interpretExpression (Boolean b) _ _ _ =
-  Right (BoolV b, L.ConstantBoolW b)
-interpretExpression (Brack exp) tEnv wEnv eEnv =
-  interpretExpression exp tEnv wEnv eEnv
-interpretExpression (Id x) tEnv wEnv eEnv =
+interpretExpression :: Exp -> InterpretM
+interpretExpression (Number n) =
+  return (IntV n, L.ConstantIntW n)
+interpretExpression (Boolean b) =
+  return (BoolV b, L.ConstantBoolW b)
+interpretExpression (Brack exp) =
+  interpretExpression exp
+interpretExpression (Id x) = do
+  (tEnv, _, _) <- ask
   E.loadE x (Err.TruthVarUndefined x) tEnv
-interpretExpression (Abs x t b) tEnv wEnv eEnv = do
-  witness <- computeWitness (Abs x t b) tEnv wEnv eEnv
-  Right (ArrowV tEnv wEnv eEnv x b, L.AbstractionW t witness)
-interpretExpression (App x y) tEnv wEnv eEnv =
+interpretExpression (Abs x t b) = do
+  env <- ask
+  witness <- computeWitness (Abs x t b)
+  return (ArrowV env x b, L.AbstractionW t witness)
+interpretExpression (App x y) =
   undefined
-interpretExpression (AuditedVar trailRenames u) _ wEnv eEnv =
+interpretExpression (AuditedVar trailRenames u) =
   undefined
-interpretExpression (AuditedUnit trailVar exp) _ wEnv eEnv =
+interpretExpression (AuditedUnit trailVar exp) =
   undefined
-interpretExpression (AuditedComp u typ arg body) tEnv wEnv eEnv =
+interpretExpression (AuditedComp u typ arg body) =
   undefined
 interpretExpression
   (TrailInspect trailVar
@@ -50,5 +60,5 @@ interpretExpression
     (L.ApplicationM app1 app2 exp_app)
     (L.LetM let1 let2 exp_let)
     (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
-    tEnv wEnv eEnv =
+    =
   undefined

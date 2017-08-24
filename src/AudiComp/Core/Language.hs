@@ -160,6 +160,8 @@ instance Pretty TrailRename where
 data Value
   = IntV Int
   | BoolV Bool
-  | ArrowV (Env ValuePair) (Env Witness) (Env Trail) String Exp
+  | ArrowV InterpretEnv String Exp
 
 type ValuePair = (Value, Witness)
+
+type InterpretEnv = (Env ValuePair, Env Witness, Env Trail)
