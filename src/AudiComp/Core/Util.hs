@@ -5,6 +5,9 @@ import AudiComp.Core.Errors.Interpreter as Err
 import AudiComp.Core.Env
 import qualified Data.Map as Map
 import Data.List
+import Control.Monad.Identity
+import Control.Monad.Except
+import Control.Monad.Reader
 
 data ValidityVarSubParams =
   ValidityVarSubParams {
@@ -235,32 +238,32 @@ getSource (L.TrailInspectionT
     (getSource letTrl)
     (getSource trplTrl)
 
-computeWitness :: L.Exp -> Env L.ValuePair -> Env L.Witness -> Env L.Trail -> Either InterpreterE L.Witness
+computeWitness :: L.Exp -> Env L.ValuePair -> Env L.Witness -> Env L.Trail -> ReaderT y (ExceptT InterpreterE Identity) L.Witness
 computeWitness (L.Number n) _ _ _ =
-  Right $ L.ConstantIntW n
+  return $ L.ConstantIntW n
 computeWitness (L.Boolean b) _ _ _ =
-  Right $L.ConstantBoolW b
+  return $ L.ConstantBoolW b
 computeWitness (L.Brack exp) tEnv wEnv eEnv =
   computeWitness exp tEnv wEnv eEnv
 computeWitness (L.Id x) tEnv wEnv eEnv = do
   (_, w) <- loadE x (Err.TruthVarUndefined x) tEnv
-  Right w
+  return w
 computeWitness (L.Abs x t b) tEnv wEnv eEnv = do
   bodyWitness <- computeWitness b tEnv wEnv eEnv
-  Right $ L.AbstractionW t bodyWitness
+  return $ L.AbstractionW t bodyWitness
 computeWitness (L.App x y) tEnv wEnv eEnv = do
   xWitness <- computeWitness x tEnv wEnv eEnv
   yWitness <- computeWitness y tEnv wEnv eEnv
-  Right $ L.ApplicationW xWitness yWitness
+  return $ L.ApplicationW xWitness yWitness
 computeWitness (L.AuditedVar trailRenames u) _ wEnv eEnv =
-  Right $ L.ValidityHypothesisW u trailRenames
+  return $ L.ValidityHypothesisW u trailRenames
 computeWitness (L.AuditedUnit trailVar exp) _ wEnv eEnv = do
   trail <- loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
-  Right $ L.BoxIntroductionW eEnv (getSource trail)
+  return $ L.BoxIntroductionW eEnv (getSource trail)
 computeWitness (L.AuditedComp u typ arg body) tEnv wEnv eEnv = do
   argWitness <- computeWitness arg tEnv wEnv eEnv
   bodyWitness <- computeWitness body tEnv wEnv eEnv
-  Right $ L.BoxEliminationW u typ argWitness bodyWitness
+  return $ L.BoxEliminationW u typ argWitness bodyWitness
 computeWitness
   (L.TrailInspect trailVar
     (L.ReflexivityM exp_r)
@@ -284,7 +287,7 @@ computeWitness
   appWitness <- computeWitness exp_app tEnv wEnv eEnv
   letWitness <- computeWitness exp_let tEnv wEnv eEnv
   trplWitness <- computeWitness exp_e tEnv wEnv eEnv
-  Right $ L.TrailInspectionW
+  return $ L.TrailInspectionW
     trailVar
     rWitness
     sWitness

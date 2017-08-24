@@ -10,6 +10,7 @@ import AudiComp.Core.Errors.Typechecker as Err
 import AudiComp.Core.Util
 import Control.Monad.Identity
 import Control.Monad.Except
+import Control.Monad.Reader
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
@@ -17,40 +18,55 @@ type TypePair = (L.Type, L.Witness)
 
 type TypecheckEnv = (Env L.Type, Env L.Type, Env L.Trail)
 
+type TypecheckM = ReaderT TypecheckEnv (ExceptT Err.TypecheckerE Identity) TypePair
+
+runTypecheckM :: TypecheckEnv -> TypecheckM -> Either Err.TypecheckerE TypePair
+runTypecheckM env m = runIdentity (runExceptT (runReaderT m env))
+
+updateTruthEnv :: (Env L.Type -> Env L.Type) -> TypecheckEnv -> TypecheckEnv
+updateTruthEnv f (tEnv, wEnv, eEnv) =
+  (f tEnv, wEnv, eEnv)
+
+updateWitnessEnv :: (Env L.Type -> Env L.Type) -> TypecheckEnv -> TypecheckEnv
+updateWitnessEnv f (tEnv, wEnv, eEnv) =
+  (tEnv, f wEnv, eEnv)
+
 typecheckProgramEmptyEnvs :: Program -> Either String TypePair
 typecheckProgramEmptyEnvs program =
-  case typecheckProgram program E.empty E.empty E.empty of
+  case typecheckProgram (E.empty, E.empty, E.empty) program of
     (Right x) -> Right x
     (Left x) -> Left $ prettyShow x
 
-typecheckProgram :: Program -> Env L.Type -> Env L.Type -> Env L.Trail -> ExceptT TypecheckerE Identity TypePair
-typecheckProgram (Program exp) =
-  typecheckExpression exp
+typecheckProgram :: TypecheckEnv -> Program -> Either Err.TypecheckerE TypePair
+typecheckProgram env (Program exp) =
+  runTypecheckM env (typecheckExpression exp)
 
-typecheckExpression :: Exp -> Env L.Type -> Env L.Type -> Env L.Trail -> ExceptT TypecheckerE Identity TypePair
-typecheckExpression (Number n) _ _ _ =
+typecheckExpression :: Exp -> TypecheckM
+typecheckExpression (Number n) =
   return (L.IntT, L.ConstantIntW n)
-typecheckExpression (Boolean b) _ _ _ =
+typecheckExpression (Boolean b) =
   return (L.BoolT, L.ConstantBoolW b)
-typecheckExpression (Brack exp) tEnv wEnv eEnv =
-  typecheckExpression exp tEnv wEnv eEnv
-typecheckExpression (Id x) tEnv wEnv eEnv = do
+typecheckExpression (Brack exp) =
+  typecheckExpression exp
+typecheckExpression (Id x) = do
+  (tEnv, _, _) <- ask
   t <- E.loadE x (Err.TruthVarUndefined x) tEnv
   return (t, L.TruthHypothesisW t)
-typecheckExpression (Abs x t b) tEnv wEnv eEnv = do
-  (returnType, returnProof) <- typecheckExpression b (E.save x t tEnv) wEnv eEnv
+typecheckExpression (Abs x t b) = do
+  (returnType, returnProof) <- local (updateTruthEnv $ E.save x t) (typecheckExpression b)
   return (L.ArrowT t returnType, L.AbstractionW t returnProof)
-typecheckExpression (App x y) tEnv wEnv eEnv = do
-  (xType, xProof) <- typecheckExpression x tEnv wEnv eEnv
+typecheckExpression (App x y) = do
+  (xType, xProof) <- typecheckExpression x
   case xType of
     (L.ArrowT l r) -> do
-      (yType, yProof) <- typecheckExpression y tEnv wEnv eEnv
+      (yType, yProof) <- typecheckExpression y
       if yType == l
       then return (r, L.ApplicationW xProof yProof)
       else throwError (Err.InvalidArgType yType l)
     t ->
       throwError (Err.ExpectedArrow x xType)
-typecheckExpression (AuditedVar trailRenames u) _ wEnv eEnv = do
+typecheckExpression (AuditedVar trailRenames u) = do
+  (_, wEnv, eEnv) <- ask
   validityVar <- E.loadE u (Err.ValidityVarUndefined u) wEnv
   case validityVar of
     (L.BoxT _ trailEnv _ t) ->
@@ -66,15 +82,18 @@ typecheckExpression (AuditedVar trailRenames u) _ wEnv eEnv = do
         else
             throwError (Err.InvalidRenameCodomain initialTrailVars codomain)
     t -> throwError (Err.ValidityVarWrongType u validityVar)
-typecheckExpression (AuditedUnit trailVar exp) _ wEnv eEnv = do
+typecheckExpression (AuditedUnit trailVar exp) = do
   let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty
-  (expType, expProof) <- typecheckExpression exp E.empty wEnv newTrailEnv
+  (expType, expProof) <- local updateEnvs (typecheckExpression exp)
   return (L.BoxT trailVar (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW newTrailEnv expProof)
-typecheckExpression (AuditedComp u typ arg body) tEnv wEnv eEnv = do
-  (argType, argProof) <- typecheckExpression arg tEnv wEnv eEnv
+  where
+    updateEnvs (_, wEnv, eEnv) =
+      (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty)
+typecheckExpression (AuditedComp u typ arg body) = do
+  (argType, argProof) <- typecheckExpression arg
   case argType of
     (L.BoxT s trailEnv p t) -> do
-      (bodyType, bodyProof) <- typecheckExpression body tEnv (E.save u argType wEnv) eEnv
+      (bodyType, bodyProof) <- local (updateWitnessEnv $ E.save u argType) (typecheckExpression body)
       let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
         return (subsitutedBodyType, L.BoxEliminationW s t bodyProof argProof)
     t -> throwError (Err.ExpectedBox argType)
@@ -90,18 +109,26 @@ typecheckExpression
     (L.ApplicationM app1 app2 exp_app)
     (L.LetM let1 let2 exp_let)
     (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
-    tEnv wEnv eEnv = do
+    = do
+  (_, _, eEnv) <- ask
   trail <- E.loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
-  (rType, rProof) <- typecheckExpression exp_r tEnv E.empty E.empty
-  (sType, sProof) <- typecheckExpression exp_s (E.save s1 rType tEnv) E.empty E.empty
-  (tType, tProof) <- typecheckExpression exp_t (E.save t2 rType (E.save t1 rType tEnv)) E.empty E.empty
-  (baType, baProof) <- typecheckExpression exp_ba tEnv E.empty E.empty
-  (bbType, bbProof) <- typecheckExpression exp_bb tEnv E.empty E.empty
-  (tiType, tiProof) <- typecheckExpression exp_ti tEnv E.empty E.empty
-  (absType, absProof) <- typecheckExpression exp_abs (E.save abs1 rType tEnv) E.empty E.empty
-  (appType, appProof) <- typecheckExpression exp_app (E.save app1 rType (E.save app2 rType tEnv)) E.empty E.empty
-  (letType, letProof) <- typecheckExpression exp_let (E.save let1 rType (E.save let2 rType tEnv)) E.empty E.empty
-  (eType, eProof) <- typecheckExpression exp_e tEnv E.empty E.empty
+  (rType, rProof) <- local keepTruthEnv (typecheckExpression exp_r)
+  (sType, sProof) <- local (updateForS rType) (typecheckExpression exp_s)
+  (tType, tProof) <- local (updateForT rType) (typecheckExpression exp_t)
+  (baType, baProof) <- local keepTruthEnv (typecheckExpression exp_ba)
+  (bbType, bbProof) <- local keepTruthEnv (typecheckExpression exp_bb)
+  (tiType, tiProof) <- local keepTruthEnv (typecheckExpression exp_ti)
+  (absType, absProof) <- local (updateForAbs rType) (typecheckExpression exp_abs)
+  (appType, appProof) <- local (updateForApp rType) (typecheckExpression exp_app)
+  (letType, letProof) <- local (updateForLet rType) (typecheckExpression exp_let)
+  (eType, eProof) <- local keepTruthEnv (typecheckExpression exp_e)
   if allEqual [rType, sType, tType, baType, bbType, tiType, absType, appType, letType, eType] then
     return (rType, L.TrailInspectionW trailVar rProof sProof tProof baProof bbProof tiProof absProof appProof letProof eProof)
   else throwError Err.InconsistentTrailMappings
+  where
+    keepTruthEnv (tEnv, _, _) = (tEnv, E.empty, E.empty)
+    updateForS t = keepTruthEnv . updateTruthEnv (E.save s1 t)
+    updateForT t = keepTruthEnv . updateTruthEnv (E.save t2 t . E.save t1 t)
+    updateForAbs t = keepTruthEnv . updateTruthEnv (E.save abs1 t)
+    updateForApp t = keepTruthEnv . updateTruthEnv (E.save app1 t . E.save app2 t)
+    updateForLet t = keepTruthEnv . updateTruthEnv (E.save let1 t . E.save let2 t)
