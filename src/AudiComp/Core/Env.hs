@@ -3,6 +3,8 @@ module AudiComp.Core.Env where
 import qualified Data.Map as Map
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
+import Control.Monad.Identity
+import Control.Monad.Except
 
 type Env v = Map.Map String v
 
@@ -20,11 +22,11 @@ save = Map.insert
 load :: String -> Env v -> Maybe v
 load = Map.lookup
 
-loadE :: String -> e -> Env v -> Either e v
+loadE :: String -> e -> Env v -> ExceptT e Identity v
 loadE s e env =
   case Map.lookup s env of
-    (Just v) -> Right v
-    Nothing -> Left e
+    (Just v) -> return v
+    Nothing -> throwError e
 
 keys :: Env v -> [String]
 keys = Map.keys
