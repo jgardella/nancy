@@ -161,7 +161,8 @@ data Value
   = IntV Int
   | BoolV Bool
   | ArrowV InterpretEnv String Exp
+  | BoxV String (Env Trail) Witness Value
 
 type ValuePair = (Value, Witness)
 
-type InterpretEnv = (Env ValuePair, Env Witness, Env Trail)
+type InterpretEnv = (Env ValuePair, Env Value, Env Trail)

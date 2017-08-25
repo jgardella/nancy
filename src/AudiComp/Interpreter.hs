@@ -16,6 +16,10 @@ type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE Identity) Value
 runInterpretM :: InterpretEnv -> InterpretM -> Either Err.InterpreterE ValuePair
 runInterpretM env m = runIdentity (runExceptT (runReaderT m env))
 
+updateTruthEnv :: (Env L.ValuePair -> Env L.ValuePair) -> InterpretEnv -> InterpretEnv
+updateTruthEnv f (tEnv, wEnv, eEnv) =
+  (f tEnv, wEnv, eEnv)
+
 interpretProgramEmptyEnvs :: Program -> Either String ValuePair
 interpretProgramEmptyEnvs program =
   case interpretProgram (E.empty, E.empty, E.empty) program of
@@ -40,10 +44,33 @@ interpretExpression (Abs x t b) = do
   env <- ask
   witness <- computeWitness (Abs x t b)
   return (ArrowV env x b, L.AbstractionW t witness)
-interpretExpression (App x y) =
-  undefined
-interpretExpression (AuditedVar trailRenames u) =
-  undefined
+interpretExpression (App x y) = do
+  (xVal, _) <- interpretExpression x
+  witness <- computeWitness (App x y)
+  case xVal of
+    (ArrowV env var body) -> do
+      yVal <- interpretExpression y
+      (value, _) <- local (updateTruthEnv (E.save var yVal) . const env) (interpretExpression body)
+      return (value, witness)
+    _ ->
+      throwError (Err.ExpectedArrow xVal)
+interpretExpression (AuditedVar trailRenames u) = do
+  (_, wEnv, eEnv) <- ask
+  witness <- computeWitness (AuditedVar trailRenames u)
+  validityVar <- E.loadE u (Err.ValidityVarUndefined u) wEnv
+  case validityVar of
+    (L.BoxV s trailEnv witness value) -> do
+      newTrailEnv <- renameTrailVars trailEnv
+      return (L.BoxV s newTrailEnv witness value, witness)
+    _ -> throwError (Err.ExpectedBox validityVar)
+  where
+    renameTrailVars trailEnv =
+      foldl (\result TrailRename{old=old, new=new} -> do
+        newTrailEnv <- result
+        value <- E.loadE old (Err.InvalidTrailRename old) trailEnv
+        return $ E.save new value newTrailEnv)
+      (return E.empty)
+      trailRenames
 interpretExpression (AuditedUnit trailVar exp) =
   undefined
 interpretExpression (AuditedComp u typ arg body) =
