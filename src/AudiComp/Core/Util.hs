@@ -265,7 +265,7 @@ computeWitness (L.AuditedUnit trailVar exp) = do
 computeWitness (L.AuditedComp u typ arg body) = do
   argWitness <- computeWitness arg
   bodyWitness <- computeWitness body
-  return $ L.BoxEliminationW u typ argWitness bodyWitness
+  return $ L.BoxEliminationW u typ bodyWitness argWitness
 computeWitness
   (L.TrailInspect trailVar
     (L.ReflexivityM exp_r)

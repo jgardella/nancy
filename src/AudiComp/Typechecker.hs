@@ -85,7 +85,7 @@ typecheckExpression (AuditedVar trailRenames u) = do
 typecheckExpression (AuditedUnit trailVar exp) = do
   let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty
   (expType, expProof) <- local updateEnvs (typecheckExpression exp)
-  return (L.BoxT trailVar (E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty) expProof expType, L.BoxIntroductionW newTrailEnv expProof)
+  return (L.BoxT trailVar newTrailEnv expProof expType, L.BoxIntroductionW newTrailEnv expProof)
   where
     updateEnvs (_, wEnv, eEnv) =
       (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty)
