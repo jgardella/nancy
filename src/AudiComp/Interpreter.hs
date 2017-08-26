@@ -47,7 +47,7 @@ interpretExpression (Id x) = do
 interpretExpression (Abs x t b) = do
   env <- ask
   witness <- computeWitness (Abs x t b)
-  return (ArrowV env x b, L.AbstractionW t witness)
+  return (ArrowV env x b, witness)
 interpretExpression (App x y) = do
   (xVal, _) <- interpretExpression x
   witness <- computeWitness (App x y)
