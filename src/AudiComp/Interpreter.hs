@@ -65,7 +65,7 @@ interpretExpression (AuditedVar trailRenames u) = do
   case validityVar of
     (L.BoxV s trailEnv witness value) -> do
       newTrailEnv <- renameTrailVars trailEnv
-      return (L.BoxV s newTrailEnv witness value, witness)
+      return (value, witness)
     _ -> throwError (Err.ExpectedBox validityVar)
   where
     renameTrailVars trailEnv =
@@ -76,22 +76,20 @@ interpretExpression (AuditedVar trailRenames u) = do
       (return E.empty)
       trailRenames
 interpretExpression (AuditedUnit trailVar exp) = do
-  witness <- computeWitness (AuditedUnit trailVar exp)
   -- TODO: save current trail
   let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty
-  (expType, _) <- local updateEnvs (interpretExpression exp)
-  return (L.BoxV trailVar newTrailEnv witness expType, L.BoxIntroductionW newTrailEnv witness)
+  (expValue, expWitness) <- local updateEnvs (interpretExpression exp)
+  return (L.BoxV trailVar newTrailEnv expWitness expValue, L.BoxIntroductionW newTrailEnv expWitness)
   where
     updateEnvs (_, wEnv, eEnv) =
       (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty)
 interpretExpression (AuditedComp u typ arg body) = do
-  witness <- computeWitness (AuditedComp u typ arg body)
-  (argValue, _) <- interpretExpression arg
+  (argValue, argWitness) <- interpretExpression arg
   case argValue of
     (L.BoxV s trailEnv w v) -> do
-      (bodyValue, _) <- local (updateWitnessEnv $ E.save u argValue) (interpretExpression body)
+      (bodyValue, bodyWitness) <- local (updateWitnessEnv $ E.save u argValue) (interpretExpression body)
       -- TODO: substitution
-      return (bodyValue, witness)
+      return (bodyValue, L.BoxEliminationW u typ bodyWitness argWitness)
     t -> throwError (Err.ExpectedBox argValue)
 interpretExpression
   inspect@(TrailInspect trailVar

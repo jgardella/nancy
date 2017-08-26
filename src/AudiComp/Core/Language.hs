@@ -162,6 +162,14 @@ data Value
   | BoolV Bool
   | ArrowV InterpretEnv String Exp
   | BoxV String (Env Trail) Witness Value
+  deriving Show
+
+instance Pretty Value where
+  pPrint (IntV i) = int i
+  pPrint (BoolV b) = text $ show b
+  pPrint (ArrowV _ arg body) = text "(" <> text arg <+> text "->" <+> text (show body) <+> text ")"
+  pPrint (BoxV _ trailEnv witness value) =
+    text "[" <> pPrint trailEnv <+> text "." <+> pPrint witness <> text "]" <+> pPrint value
 
 type ValuePair = (Value, Witness)
 

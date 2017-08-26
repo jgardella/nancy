@@ -18,7 +18,7 @@ instance Pretty InterpreterE where
   pPrint (TrailVarUndefined eVar) =
     text "Trail variable" <+> text eVar <+> text "is not defined"
   pPrint (ExpectedArrow value) =
-    text "Expected Arrow value"
+    text "Expected Arrow value, but got" <+> pPrint value
   pPrint (ValidityVarUndefined wVar) =
     text "Validity variable" <+> text wVar <+> text "is not defined"
   pPrint (ExpectedBox value) =
