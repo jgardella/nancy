@@ -7,7 +7,6 @@ import AudiComp.Parser( parseProgram )
 import System.Environment ( getArgs )
 import AudiComp.Typechecker
 import AudiComp.Interpreter
-import qualified AudiComp.Core.Env as Env
 import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
 data Mode = Parse
