@@ -12,7 +12,7 @@ maintainer:          jason.a.gardella@gmail.com
 -- copyright:
 category:            Language
 build-type:          Simple
-extra-source-files:  ChangeLog.md
+extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
@@ -43,6 +43,8 @@ library
     Haskell2010
 
 executable auditedComputation
+  hs-source-dirs:
+    app
   main-is:
     Main.hs
   build-depends:
@@ -59,7 +61,7 @@ test-suite test
   type:
     exitcode-stdio-1.0
   hs-source-dirs:
-    tests
+    test
   main-is:
     Test.hs
   build-depends:
