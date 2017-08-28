@@ -27,6 +27,7 @@ library
     AudiComp.Core.Env,
     AudiComp.Core.Language,
     AudiComp.Core.Util,
+    AudiComp.Core.Errors,
     AudiComp.Core.Errors.Typechecker,
     AudiComp.Core.Errors.Interpreter
   build-depends:
@@ -60,6 +61,8 @@ test-suite test
     Haskell2010
   type:
     exitcode-stdio-1.0
+  other-modules:
+    Test.Unit.Typechecker
   hs-source-dirs:
     test
   main-is:

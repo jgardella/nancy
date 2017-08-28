@@ -5,6 +5,7 @@ module AudiComp.Parser( parseProgram ) where
 import Data.Char
 import AudiComp.Lexer
 import AudiComp.Core.Language
+import AudiComp.Core.Errors
 }
 
 %name parse

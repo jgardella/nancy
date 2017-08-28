@@ -59,8 +59,8 @@ main = do
                 fileName -> readFile fileName
   case mode args of
     Parse -> do
-      result <- fmap (parseProgram $ fileName args) input
-      either putStrLn print result
+      result <- fmap (parse $ fileName args) input
+      either (putStrLn . prettyShow) print result
     Typecheck -> do
       typecheckResult <- fmap (parseAndTypecheck $ fileName args) input
       case typecheckResult of
