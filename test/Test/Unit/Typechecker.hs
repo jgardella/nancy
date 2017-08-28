@@ -3,6 +3,8 @@ module Test.Unit.Typechecker where
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import AudiComp.Core.Env as Env
+import qualified Data.Map as Map
 import AudiComp.Helper
 import AudiComp.Typechecker
 import AudiComp.Core.Language
@@ -34,6 +36,7 @@ typecheckerTests = testGroup "Typechecker"
   , idType
   , arrowType
   , application
+  , auditedVar
   ]
 
 intType =
@@ -61,7 +64,7 @@ boolType =
 idType =
   testGroup "Id"
   [
-    testCase "Lookup of undefined variable" $
+    testCase "undefined truth variable" $
       assertTypecheckErr ""
         (typecheck "x")
         (TypecheckE.TruthVarUndefined "x")
@@ -105,4 +108,99 @@ application =
     assertTypecheckErr ""
       (typecheck "(fun (x:int) -> true) true")
       (TypecheckE.InvalidArgType BoolT IntT)
+  ]
+
+auditedVar =
+  testGroup "Audited Computation"
+  [
+    testCase "undefined validity variable" $
+      assertTypecheckErr ""
+        (typecheck "<x->y|z>")
+        (TypecheckE.ValidityVarUndefined "z")
+  , testCase "audited unit" $
+      assertRight ""
+        (typecheck "!u true")
+        (
+          (BoxT "u"
+            (Map.fromList [("u", (Reflexivity $ TruthHypothesisW IntT))])
+            (ConstantBoolW True)
+            BoolT),
+          BoxIntroductionW
+            (Map.fromList [("u", (Reflexivity $ TruthHypothesisW IntT))])
+            (ConstantBoolW True)
+        )
+  , testCase "audited composition" $
+      assertRight ""
+        (typecheck
+         "!x\
+          \ let u:int->bool be\
+          \   !y fun (a:int) -> true\
+          \ in\
+          \   <y->x | u> 3")
+        ((BoxT
+          "x"
+          (Map.fromList [("x", Reflexivity (TruthHypothesisW IntT))])
+          (BoxEliminationW "y"
+            (ArrowT IntT BoolT)
+            (ApplicationW
+              (ValidityHypothesisW "u" [TrailRename {old = "y", new = "x"}])
+              (ConstantIntW 3))
+            (BoxIntroductionW
+              (Map.fromList [("y", Reflexivity (TruthHypothesisW IntT))])
+              (AbstractionW IntT (ConstantBoolW True))))
+          BoolT),
+        (BoxIntroductionW
+          (Map.fromList [("x", Reflexivity (TruthHypothesisW IntT))])
+          (BoxEliminationW "y"
+            (ArrowT IntT BoolT)
+            (ApplicationW
+               (ValidityHypothesisW "u" [TrailRename {old = "y", new = "x"}])
+               (ConstantIntW 3))
+            (BoxIntroductionW
+              (Map.fromList [("y", Reflexivity (TruthHypothesisW IntT))])
+              (AbstractionW IntT (ConstantBoolW True))))))
+  , testCase "trail inspection" $
+      assertRight ""
+        (typecheck
+         "!e (\
+          \ e[\
+          \   r -> false;\
+          \   s(x) -> x;\
+          \   t(x y) ->  x;\
+          \   ba -> true;\
+          \   bb -> true;\
+          \   ti -> false;\
+          \   abs(x) -> x;\
+          \   app(x y) -> x;\
+          \   let(x y) -> x;\
+          \   trpl(x1 x2 x3 x4 x5 x6 x7 x8 x9 x10) -> true\
+          \   ]\
+          \  )")
+        ((BoxT "e"
+          (Map.fromList [("e",Reflexivity (TruthHypothesisW IntT))])
+          (TrailInspectionW "e"
+            (ConstantBoolW False)
+            (TruthHypothesisW BoolT)
+            (TruthHypothesisW BoolT)
+            (ConstantBoolW True)
+            (ConstantBoolW True)
+            (ConstantBoolW False)
+            (TruthHypothesisW BoolT)
+            (TruthHypothesisW BoolT)
+            (TruthHypothesisW BoolT)
+            (ConstantBoolW True))
+          BoolT),
+        (BoxIntroductionW
+          (Map.fromList [("e",Reflexivity (TruthHypothesisW IntT))])
+          (TrailInspectionW "e"
+            (ConstantBoolW False)
+            (TruthHypothesisW BoolT)
+            (TruthHypothesisW BoolT)
+            (ConstantBoolW True)
+            (ConstantBoolW True)
+            (ConstantBoolW False)
+            (TruthHypothesisW BoolT)
+            (TruthHypothesisW BoolT)
+            (TruthHypothesisW BoolT)
+            (ConstantBoolW True))))
   ]

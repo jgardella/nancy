@@ -71,4 +71,5 @@ test-suite test
     base >=4.9 && <4.10,
     auditedComputation,
     tasty,
-    tasty-hunit
+    tasty-hunit,
+    containers
