@@ -3,9 +3,10 @@ module Test.Unit.Typechecker where
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import AudiComp.Helper
 import AudiComp.Typechecker
 import AudiComp.Core.Language
-import AudiComp.Helper
+import AudiComp.Core.Errors.Typechecker as Err
 
 typecheck = parseAndTypecheck "<test>"
 
@@ -49,4 +50,16 @@ arrowType =
       assertEqual ""
         (typecheck "fun (x:int) -> x")
         (Right (ArrowT IntT IntT, AbstractionW IntT (TruthHypothesisW IntT)))
+  ]
+
+app =
+  testGroup "Application"
+  [
+    testCase "Function application" $
+      assertEqual ""
+        (typecheck "(fun x:int) -> true) 1")
+        (Right (BoolT,
+          ApplicationW
+            (AbstractionW IntT (ConstantBoolW True))
+            (ConstantIntW 1)))
   ]

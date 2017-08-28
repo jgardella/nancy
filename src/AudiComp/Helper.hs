@@ -4,6 +4,7 @@ import AudiComp.Parser
 import AudiComp.Typechecker
 import AudiComp.Interpreter
 import AudiComp.Core.Language
+import AudiComp.Core.Errors.Typechecker
 
 parseAndTypecheck :: FilePath -> String -> Either String TypePair
 parseAndTypecheck source input = do
