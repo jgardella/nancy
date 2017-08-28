@@ -21,9 +21,9 @@ library
   exposed-modules:
     AudiComp.Typechecker,
     AudiComp.Interpreter,
-    AudiComp.Parser
-  other-modules:
+    AudiComp.Parser,
     AudiComp.Lexer,
+    AudiComp.Helper,
     AudiComp.Core.Env,
     AudiComp.Core.Language,
     AudiComp.Core.Util,

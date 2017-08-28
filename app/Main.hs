@@ -7,6 +7,7 @@ import AudiComp.Parser( parseProgram )
 import System.Environment ( getArgs )
 import AudiComp.Typechecker
 import AudiComp.Interpreter
+import AudiComp.Helper
 import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
 data Mode = Parse
@@ -60,19 +61,13 @@ main = do
     Parse -> do
       result <- fmap (parseProgram $ fileName args) input
       either putStrLn print result
-    Typecheck ->
-      input
-      & fmap (parseProgram $ fileName args)
-      >>= (\parseResult ->
-        let typecheckResult = parseResult >>= typecheckProgramEmptyEnvs in
-          case typecheckResult of
-            (Left l) -> ("Error: " ++ show l) & putStrLn
-            (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn)
-    Interpret ->
-      input
-      & fmap (parseProgram $ fileName args)
-      >>= (\parseResult ->
-        let interpretResult = parseResult >>= interpretProgramEmptyEnvs in
-          case interpretResult of
-            (Left l) -> ("Error: " ++ show l) & putStrLn
-            (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn)
+    Typecheck -> do
+      typecheckResult <- fmap (parseAndTypecheck $ fileName args) input
+      case typecheckResult of
+        (Left l) -> ("Error: " ++ show l) & putStrLn
+        (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn
+    Interpret -> do
+      interpretResult <- fmap (parseAndInterpret $ fileName args) input
+      case interpretResult of
+        (Left l) -> ("Error: " ++ show l) & putStrLn
+        (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn
