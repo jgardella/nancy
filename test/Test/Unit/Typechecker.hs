@@ -9,6 +9,22 @@ import AudiComp.Core.Language
 import AudiComp.Core.Errors
 import AudiComp.Core.Errors.Typechecker as TypecheckE
 
+assertRight msg result expected =
+  case result of
+    Right x -> assertEqual msg expected x
+    Left err -> assertFailure ("Expected Right result but got " ++ show result)
+
+assertLeft msg result expected =
+  case result of
+    Right x -> assertFailure ("Expected Left result but got " ++ show result)
+    Left err -> assertEqual msg expected err
+
+assertTypecheckErr msg result expected =
+  case result of
+    Right x -> assertFailure ("Expected Left result but got " ++ show result)
+    Left (TypecheckErr err) -> assertEqual msg expected err
+    err -> assertFailure ("Expected TypecheckErr but got " ++ show err)
+
 typecheck = parseAndTypecheck "<test>"
 
 typecheckerTests :: TestTree
@@ -24,69 +40,69 @@ intType =
   testGroup "Int"
   [
     testCase "int type" $
-      assertEqual ""
+      assertRight ""
         (typecheck "1")
-        (Right (IntT, ConstantIntW 1))
+        (IntT, ConstantIntW 1)
   ]
 
 boolType =
   testGroup "Bool"
   [
     testCase "bool type (true)" $
-      assertEqual ""
+      assertRight ""
         (typecheck "true")
-        (Right (BoolT, ConstantBoolW True))
+        (BoolT, ConstantBoolW True)
   , testCase "bool type (false)" $
-      assertEqual ""
+      assertRight ""
         (typecheck "false")
-        (Right (BoolT, ConstantBoolW False))
+        (BoolT, ConstantBoolW False)
   ]
 
 idType =
   testGroup "Id"
   [
     testCase "Lookup of undefined variable" $
-      assertEqual ""
+      assertTypecheckErr ""
         (typecheck "x")
-        (Left (TypecheckErr (TypecheckE.TruthVarUndefined "x")))
+        (TypecheckE.TruthVarUndefined "x")
   ]
 
 arrowType =
   testGroup "Arrow"
   [
     testCase "constant body" $
-      assertEqual ""
+      assertRight ""
         (typecheck "fun (x:int) -> true")
-        (Right (ArrowT IntT BoolT, AbstractionW IntT (ConstantBoolW True)))
+        (ArrowT IntT BoolT, AbstractionW IntT (ConstantBoolW True))
   , testCase "parameter usage" $
-      assertEqual ""
+      assertRight ""
         (typecheck "fun (x:int) -> x")
-        (Right (ArrowT IntT IntT, AbstractionW IntT (TruthHypothesisW IntT)))
+        (ArrowT IntT IntT, AbstractionW IntT (TruthHypothesisW IntT))
   ]
 
 application =
   testGroup "Application"
   [
     testCase "function application" $
-      assertEqual ""
+      assertRight ""
         (typecheck "(fun (x:int) -> true) 1")
-        (Right (BoolT,
+        (BoolT,
           ApplicationW
             (AbstractionW IntT (ConstantBoolW True))
-            (ConstantIntW 1)))
+            (ConstantIntW 1))
   , testCase "function application with lookup" $
-      assertEqual ""
+      assertRight ""
         (typecheck "(fun (x:int) -> x) 1")
-        (Right (IntT,
+        (IntT,
           ApplicationW
             (AbstractionW IntT (TruthHypothesisW IntT))
-            (ConstantIntW 1)))
+            (ConstantIntW 1))
   , testCase "expected arrow" $
-    assertEqual ""
+    assertTypecheckErr ""
       (typecheck "1 true")
-      (Left $ TypecheckErr (TypecheckE.ExpectedArrow (Number 1) IntT))
+      (TypecheckE.ExpectedArrow (Number 1) IntT)
   , testCase "invalid arg type" $
-    assertEqual ""
+    assertTypecheckErr ""
       (typecheck "(fun (x:int) -> true) true")
-      (Left $ TypecheckErr (TypecheckE.InvalidArgType BoolT IntT))
+      (TypecheckE.InvalidArgType BoolT IntT)
   ]
