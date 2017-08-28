@@ -4,6 +4,7 @@ import AudiComp.Core.Language as L
 import Text.Printf
 import AudiComp.Core.Util
 import AudiComp.Core.Env as E
+import AudiComp.Core.Errors
 import AudiComp.Core.Errors.Interpreter as Err
 import Control.Monad.Identity
 import Control.Monad.Except
@@ -24,11 +25,11 @@ updateWitnessEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateWitnessEnv f (tEnv, wEnv, eEnv) =
   (tEnv, f wEnv, eEnv)
 
-interpretProgramEmptyEnvs :: Program -> Either String ValuePair
+interpretProgramEmptyEnvs :: Program -> Either AudiCompError ValuePair
 interpretProgramEmptyEnvs program =
   case interpretProgram (E.empty, E.empty, E.empty) program of
     (Right x) -> Right x
-    (Left x) -> Left $ prettyShow x
+    (Left x) -> Left $ InterpretErr x
 
 interpretProgram :: InterpretEnv -> Program -> Either InterpreterE ValuePair
 interpretProgram env (Program exp) =

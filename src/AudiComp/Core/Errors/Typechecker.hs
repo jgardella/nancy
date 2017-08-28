@@ -15,6 +15,7 @@ data TypecheckerE
   | InconsistentTrailMappings
   | InvalidRenameDomain [String] [String]
   | InvalidRenameCodomain [String] [String]
+  deriving (Eq, Show)
 
 instance Pretty TypecheckerE where
   pPrint (TruthVarUndefined tVar) =

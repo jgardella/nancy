@@ -13,12 +13,12 @@ parse source input =
     (Right x) -> Right x
     (Left e) -> Left $ ParserErr e
 
-parseAndTypecheck :: FilePath -> String -> Either String TypePair
+parseAndTypecheck :: FilePath -> String -> Either AudiCompError TypePair
 parseAndTypecheck source input = do
-  parseResult <- parseProgram source input
+  parseResult <- parse source input
   typecheckProgramEmptyEnvs parseResult
 
-parseAndInterpret :: FilePath -> String -> Either String ValuePair
+parseAndInterpret :: FilePath -> String -> Either AudiCompError ValuePair
 parseAndInterpret source input = do
-  parseResult <- parseProgram source input
+  parseResult <- parse source input
   interpretProgramEmptyEnvs parseResult

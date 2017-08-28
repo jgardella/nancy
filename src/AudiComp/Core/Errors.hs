@@ -9,6 +9,7 @@ data AudiCompError
   = ParserErr String
   | TypecheckErr TypecheckerE
   | InterpretErr InterpreterE
+  deriving (Eq, Show)
 
 instance Pretty AudiCompError where
   pPrint (ParserErr err) = text "Error during lexing/parsing:" <+> text err

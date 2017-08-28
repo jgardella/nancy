@@ -11,6 +11,7 @@ data InterpreterE
   | ValidityVarUndefined String
   | ExpectedBox Value
   | InvalidTrailRename String
+  deriving (Eq, Show)
 
 instance Pretty InterpreterE where
   pPrint (TruthVarUndefined tVar) =

@@ -133,7 +133,7 @@ data Exp
   | AuditedComp String Type Exp Exp
   | TrailInspect String TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap
   | DerivedTerm Trail Exp
-  deriving Show
+  deriving (Eq, Show)
 
 data TrailMap
   = ReflexivityM Exp
@@ -146,7 +146,7 @@ data TrailMap
   | ApplicationM String String Exp
   | LetM String String Exp
   | ReplacementM String String String String String String String String String String Exp
-  deriving Show
+  deriving (Eq, Show)
 
 data TrailRename = TrailRename {
     old :: String
@@ -162,7 +162,7 @@ data Value
   | BoolV Bool
   | ArrowV InterpretEnv String Exp
   | BoxV String (Env Trail) Witness Value
-  deriving Show
+  deriving (Eq, Show)
 
 instance Pretty Value where
   pPrint (IntV i) = int i

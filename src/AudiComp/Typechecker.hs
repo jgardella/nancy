@@ -6,6 +6,7 @@ import AudiComp.Parser
 import AudiComp.Core.Language as L
 import Text.Printf
 import AudiComp.Core.Env as E
+import AudiComp.Core.Errors
 import AudiComp.Core.Errors.Typechecker as Err
 import AudiComp.Core.Util
 import Control.Monad.Identity
@@ -31,11 +32,11 @@ updateWitnessEnv :: (Env L.Type -> Env L.Type) -> TypecheckEnv -> TypecheckEnv
 updateWitnessEnv f (tEnv, wEnv, eEnv) =
   (tEnv, f wEnv, eEnv)
 
-typecheckProgramEmptyEnvs :: Program -> Either String TypePair
+typecheckProgramEmptyEnvs :: Program -> Either AudiCompError TypePair
 typecheckProgramEmptyEnvs program =
   case typecheckProgram (E.empty, E.empty, E.empty) program of
     (Right x) -> Right x
-    (Left x) -> Left $ prettyShow x
+    (Left x) -> Left $ TypecheckErr x
 
 typecheckProgram :: TypecheckEnv -> Program -> Either Err.TypecheckerE TypePair
 typecheckProgram env (Program exp) =

@@ -60,14 +60,14 @@ main = do
   case mode args of
     Parse -> do
       result <- fmap (parse $ fileName args) input
-      either (putStrLn . prettyShow) print result
+      either (putStrLn . smartShow args) print result
     Typecheck -> do
       typecheckResult <- fmap (parseAndTypecheck $ fileName args) input
       case typecheckResult of
-        (Left l) -> ("Error: " ++ show l) & putStrLn
+        (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
         (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn
     Interpret -> do
       interpretResult <- fmap (parseAndInterpret $ fileName args) input
       case interpretResult of
-        (Left l) -> ("Error: " ++ show l) & putStrLn
+        (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
         (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn
