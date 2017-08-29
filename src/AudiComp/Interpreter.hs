@@ -25,15 +25,11 @@ updateWitnessEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateWitnessEnv f (tEnv, wEnv, eEnv) =
   (tEnv, f wEnv, eEnv)
 
-interpretProgramEmptyEnvs :: Program -> Either AudiCompError ValuePair
-interpretProgramEmptyEnvs program =
-  case interpretProgram (E.empty, E.empty, E.empty) program of
+interpretProgram :: InterpretEnv -> Program -> Either AudiCompError ValuePair
+interpretProgram env (Program exp) =
+  case runInterpretM env (interpretExpression exp) of
     (Right x) -> Right x
     (Left x) -> Left $ InterpretErr x
-
-interpretProgram :: InterpretEnv -> Program -> Either InterpreterE ValuePair
-interpretProgram env (Program exp) =
-  runInterpretM env (interpretExpression exp)
 
 interpretExpression :: Exp -> InterpretM
 interpretExpression (Number n) =

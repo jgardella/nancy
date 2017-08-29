@@ -32,15 +32,11 @@ updateWitnessEnv :: (Env L.Type -> Env L.Type) -> TypecheckEnv -> TypecheckEnv
 updateWitnessEnv f (tEnv, wEnv, eEnv) =
   (tEnv, f wEnv, eEnv)
 
-typecheckProgramEmptyEnvs :: Program -> Either AudiCompError TypePair
-typecheckProgramEmptyEnvs program =
-  case typecheckProgram (E.empty, E.empty, E.empty) program of
+typecheckProgram :: TypecheckEnv -> Program -> Either AudiCompError TypePair
+typecheckProgram env (Program exp) =
+  case runTypecheckM env (typecheckExpression exp) of
     (Right x) -> Right x
     (Left x) -> Left $ TypecheckErr x
-
-typecheckProgram :: TypecheckEnv -> Program -> Either Err.TypecheckerE TypePair
-typecheckProgram env (Program exp) =
-  runTypecheckM env (typecheckExpression exp)
 
 typecheckExpression :: Exp -> TypecheckM
 typecheckExpression (Number n) =

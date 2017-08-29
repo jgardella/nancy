@@ -28,6 +28,7 @@ assertTypecheckErr msg result expected =
     err -> assertFailure ("Expected TypecheckErr but got " ++ show err)
 
 typecheck = parseAndTypecheck "<test>"
+typecheckWithEnv = parseAndTypecheckWithEnv "<test>"
 
 typecheckerTests :: TestTree
 typecheckerTests = testGroup "Typechecker"
@@ -68,6 +69,14 @@ idType =
       assertTypecheckErr ""
         (typecheck "x")
         (TypecheckE.TruthVarUndefined "x")
+  , testCase "defined truth variable" $
+      assertRight ""
+        (typecheckWithEnv "x"
+          ((Env.save "x" IntT Env.empty),
+          (Env.empty),
+          (Env.empty))
+        )
+        (IntT, TruthHypothesisW IntT)
   ]
 
 arrowType =
