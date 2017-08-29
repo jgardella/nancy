@@ -159,6 +159,24 @@ auditedVar =
             (BoxIntroductionW
               (Map.fromList [("y", Reflexivity (TruthHypothesisW IntT))])
               (AbstractionW IntT (ConstantBoolW True))))))
+  , testCase "invalid rename domain" $
+      assertTypecheckErr ""
+        (typecheck
+         "!x\
+          \ let u:int->bool be\
+          \   !y fun (a:int) -> true\
+          \ in\
+          \   <z->x | u> 3")
+        (TypecheckE.InvalidRenameDomain ["y"] ["z"])
+  , testCase "invalid rename codomain" $
+      assertTypecheckErr ""
+        (typecheck
+         "!x\
+          \ let u:int->bool be\
+          \   !y fun (a:int) -> true\
+          \ in\
+          \   <y->z | u> 3")
+        (TypecheckE.InvalidRenameCodomain ["x"] ["z"])
   , testCase "trail inspection" $
       assertRight ""
         (typecheck
