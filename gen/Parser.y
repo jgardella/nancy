@@ -1,11 +1,11 @@
 {
 {-# OPTIONS -w #-}
-module AudiComp.Parser( parseProgram ) where
+module Nancy.Parser( parseProgram ) where
 
 import Data.Char
-import AudiComp.Lexer
-import AudiComp.Core.Language
-import AudiComp.Core.Errors
+import Nancy.Lexer
+import Nancy.Core.Language
+import Nancy.Core.Errors
 }
 
 %name parse

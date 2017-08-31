@@ -1,11 +1,11 @@
-module AudiComp.Interpreter where
+module Nancy.Interpreter where
 
-import AudiComp.Core.Language as L
+import Nancy.Core.Language as L
 import Text.Printf
-import AudiComp.Core.Util
-import AudiComp.Core.Env as E
-import AudiComp.Core.Errors
-import AudiComp.Core.Errors.Interpreter as Err
+import Nancy.Core.Util
+import Nancy.Core.Env as E
+import Nancy.Core.Errors
+import Nancy.Core.Errors.Interpreter as Err
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -25,7 +25,7 @@ updateWitnessEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateWitnessEnv f (tEnv, wEnv, eEnv) =
   (tEnv, f wEnv, eEnv)
 
-interpretProgram :: InterpretEnv -> Program -> Either AudiCompError ValuePair
+interpretProgram :: InterpretEnv -> Program -> Either NancyError ValuePair
 interpretProgram env (Program exp) =
   case runInterpretM env (interpretExpression exp) of
     (Right x) -> Right x

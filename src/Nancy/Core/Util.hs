@@ -1,8 +1,8 @@
-module AudiComp.Core.Util where
+module Nancy.Core.Util where
 
-import qualified AudiComp.Core.Language as L
-import AudiComp.Core.Errors.Interpreter as Err
-import AudiComp.Core.Env
+import qualified Nancy.Core.Language as L
+import Nancy.Core.Errors.Interpreter as Err
+import Nancy.Core.Env
 import qualified Data.Map as Map
 import Data.List
 import Control.Monad.Identity

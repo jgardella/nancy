@@ -38,7 +38,7 @@ Session.vim
 tags
 
 ### Misc ###
-src/AudiComp/Parser.hs
-src/AudiComp/Lexer.hs
+src/Nancy/Parser.hs
+src/Nancy/Lexer.hs
 
 # End of https://www.gitignore.io/api/haskell,vim

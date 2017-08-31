@@ -1,14 +1,14 @@
-module AudiComp.Typechecker where
+module Nancy.Typechecker where
 
 import Data.Function((&))
 import Data.Either.Combinators
-import AudiComp.Parser
-import AudiComp.Core.Language as L
+import Nancy.Parser
+import Nancy.Core.Language as L
 import Text.Printf
-import AudiComp.Core.Env as E
-import AudiComp.Core.Errors
-import AudiComp.Core.Errors.Typechecker as Err
-import AudiComp.Core.Util
+import Nancy.Core.Env as E
+import Nancy.Core.Errors
+import Nancy.Core.Errors.Typechecker as Err
+import Nancy.Core.Util
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
@@ -32,7 +32,7 @@ updateWitnessEnv :: (Env L.Type -> Env L.Type) -> TypecheckEnv -> TypecheckEnv
 updateWitnessEnv f (tEnv, wEnv, eEnv) =
   (tEnv, f wEnv, eEnv)
 
-typecheckProgram :: TypecheckEnv -> Program -> Either AudiCompError TypePair
+typecheckProgram :: TypecheckEnv -> Program -> Either NancyError TypePair
 typecheckProgram env (Program exp) =
   case runTypecheckM env (typecheckExpression exp) of
     (Right x) -> Right x

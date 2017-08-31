@@ -1,6 +1,6 @@
-module AudiComp.Core.Language where
+module Nancy.Core.Language where
 
-import AudiComp.Core.Env
+import Nancy.Core.Env
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 

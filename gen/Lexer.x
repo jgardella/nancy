@@ -1,6 +1,6 @@
 {
 {-# OPTIONS -w  #-}
-module AudiComp.Lexer
+module Nancy.Lexer
   ( Token(..)
   , AlexPosn(..)
   , TokenClass(..)

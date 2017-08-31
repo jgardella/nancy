@@ -3,11 +3,11 @@ module Main(main) where
 import Options.Applicative
 import Data.Function((&))
 import Data.Semigroup((<>))
-import AudiComp.Parser( parseProgram )
+import Nancy.Parser( parseProgram )
 import System.Environment ( getArgs )
-import AudiComp.Typechecker
-import AudiComp.Interpreter
-import AudiComp.Helper
+import Nancy.Typechecker
+import Nancy.Interpreter
+import Nancy.Helper
 import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
 data Mode = Parse

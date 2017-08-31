@@ -3,13 +3,13 @@ module Test.Unit.Interpreter where
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import AudiComp.Core.Env as Env
+import Nancy.Core.Env as Env
 import qualified Data.Map as Map
-import AudiComp.Helper
-import AudiComp.Interpreter
-import AudiComp.Core.Language
-import AudiComp.Core.Errors
-import AudiComp.Core.Errors.Interpreter as InterpretE
+import Nancy.Helper
+import Nancy.Interpreter
+import Nancy.Core.Language
+import Nancy.Core.Errors
+import Nancy.Core.Errors.Interpreter as InterpretE
 
 assertRight msg result expected =
   case result of

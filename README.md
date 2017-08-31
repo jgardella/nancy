@@ -1,6 +1,6 @@
-# Audited Computation
+# Nancy
 
-An implementation of a typechecker and interpreter for a programming language supporting computational provenance.
+An programming language supporting computational provenance.
 
 ## Build
 

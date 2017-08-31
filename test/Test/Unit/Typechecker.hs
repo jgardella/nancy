@@ -3,13 +3,13 @@ module Test.Unit.Typechecker where
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import AudiComp.Core.Env as Env
+import Nancy.Core.Env as Env
 import qualified Data.Map as Map
-import AudiComp.Helper
-import AudiComp.Typechecker
-import AudiComp.Core.Language
-import AudiComp.Core.Errors
-import AudiComp.Core.Errors.Typechecker as TypecheckE
+import Nancy.Helper
+import Nancy.Typechecker
+import Nancy.Core.Language
+import Nancy.Core.Errors
+import Nancy.Core.Errors.Typechecker as TypecheckE
 
 assertRight msg result expected =
   case result of

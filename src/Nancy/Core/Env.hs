@@ -1,4 +1,4 @@
-module AudiComp.Core.Env where
+module Nancy.Core.Env where
 
 import qualified Data.Map as Map
 import Text.PrettyPrint

@@ -1,6 +1,6 @@
-module AudiComp.Core.Errors.Typechecker where
+module Nancy.Core.Errors.Typechecker where
 
-import AudiComp.Core.Language
+import Nancy.Core.Language
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
