@@ -17,7 +17,7 @@ type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE Identity) Value
 runInterpretM :: InterpretEnv -> InterpretM -> Either Err.InterpreterE ValuePair
 runInterpretM env m = runIdentity (runExceptT (runReaderT m env))
 
-updateTruthEnv :: (Env L.ValuePair -> Env L.ValuePair) -> InterpretEnv -> InterpretEnv
+updateTruthEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateTruthEnv f (tEnv, wEnv, eEnv) =
   (f tEnv, wEnv, eEnv)
 
@@ -40,7 +40,8 @@ interpretExpression (Brack exp) =
   interpretExpression exp
 interpretExpression (Id x) = do
   (tEnv, _, _) <- ask
-  E.loadE x (Err.TruthVarUndefined x) tEnv
+  v <- E.loadE x (Err.TruthVarUndefined x) tEnv
+  return (v, L.TruthHypothesisW x)
 interpretExpression (Abs x t b) = do
   env <- ask
   witness <- computeWitness (Abs x t b)
@@ -50,7 +51,7 @@ interpretExpression (App x y) = do
   witness <- computeWitness (App x y)
   case xVal of
     (ArrowV env var body) -> do
-      yVal <- interpretExpression y
+      (yVal, yWitness) <- interpretExpression y
       (value, _) <- local (updateTruthEnv (E.save var yVal) . const env) (interpretExpression body)
       return (value, witness)
     _ ->
@@ -74,12 +75,12 @@ interpretExpression (AuditedVar trailRenames u) = do
       trailRenames
 interpretExpression (AuditedUnit trailVar exp) = do
   -- TODO: save current trail
-  let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty
+  let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW "") E.empty
   (expValue, expWitness) <- local updateEnvs (interpretExpression exp)
   return (L.BoxV trailVar newTrailEnv expWitness expValue, L.BoxIntroductionW newTrailEnv expWitness)
   where
     updateEnvs (_, wEnv, eEnv) =
-      (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty)
+      (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW "") E.empty)
 interpretExpression (AuditedComp u typ arg body) = do
   (argValue, argWitness) <- interpretExpression arg
   case argValue of
@@ -101,54 +102,54 @@ interpretExpression
     (L.TrailInspectionM exp_ti)
     (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
     = do
-  (tEnv, wEnv, eEnv) <- ask
   witness <- computeWitness inspect
+  (tEnv, wEnv, eEnv) <- ask
   trail <- E.loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
   trailFold trail
   where
     trailFold (Reflexivity _) = interpretExpression exp_r
     trailFold (Symmetry trl) = do
-      sResult <- trailFold trl
-      local (updateTruthEnv $ E.save s1 sResult) (interpretExpression exp_s)
+      (sVal, _) <- trailFold trl
+      local (updateTruthEnv $ E.save s1 sVal) (interpretExpression exp_s)
     trailFold (Transitivity trl1 trl2) = do
-      t1Result <- trailFold trl1
-      t2Result <- trailFold trl2
-      local (updateTruthEnv $ E.save t1 t1Result . E.save t2 t2Result) (interpretExpression exp_t)
+      (t1Val, _) <- trailFold trl1
+      (t2Val, _) <- trailFold trl2
+      local (updateTruthEnv $ E.save t1 t1Val . E.save t2 t2Val) (interpretExpression exp_t)
     trailFold Beta{} = interpretExpression exp_ba
     trailFold BetaBox{} = interpretExpression exp_bb
     trailFold (AbsCompat _ trl) = do
-      absResult <- trailFold trl
-      local (updateTruthEnv $ E.save abs absResult) (interpretExpression exp_abs)
+      (absVal, _) <- trailFold trl
+      local (updateTruthEnv $ E.save abs absVal) (interpretExpression exp_abs)
     trailFold (AppCompat trl1 trl2) = do
-      app1Result <- trailFold trl1
-      app2Result <- trailFold trl2
-      local (updateTruthEnv $ E.save app1 app1Result . E.save app2 app2Result) (interpretExpression exp_app)
+      (app1Val, _) <- trailFold trl1
+      (app2Val, _) <- trailFold trl2
+      local (updateTruthEnv $ E.save app1 app1Val . E.save app2 app2Val) (interpretExpression exp_app)
     trailFold (LetCompat _ _ trl1 trl2) = do
-      let1Result <- trailFold trl1
-      let2Result <- trailFold trl2
-      local (updateTruthEnv $ E.save let1 let1Result . E.save let2 let2Result) (interpretExpression exp_let)
+      (let1Val, _) <- trailFold trl1
+      (let2Val, _) <- trailFold trl2
+      local (updateTruthEnv $ E.save let1 let1Val . E.save let2 let2Val) (interpretExpression exp_let)
     trailFold (TrailInspectionT _
       trl1 trl2 trl3 trl4 trl5 trl6 trl7 trl8 trl9 trl10) = do
-      e1Result <- trailFold trl1
-      e2Result <- trailFold trl2
-      e3Result <- trailFold trl3
-      e4Result <- trailFold trl4
-      e5Result <- trailFold trl5
-      e6Result <- trailFold trl6
-      e7Result <- trailFold trl7
-      e8Result <- trailFold trl8
-      e9Result <- trailFold trl9
-      e10Result <- trailFold trl10
+      (e1Val, _) <- trailFold trl1
+      (e2Val, _) <- trailFold trl2
+      (e3Val, _) <- trailFold trl3
+      (e4Val, _) <- trailFold trl4
+      (e5Val, _) <- trailFold trl5
+      (e6Val, _) <- trailFold trl6
+      (e7Val, _) <- trailFold trl7
+      (e8Val, _) <- trailFold trl8
+      (e9Val, _) <- trailFold trl9
+      (e10Val, _) <- trailFold trl10
       local
         (updateTruthEnv
-          $ E.save e1 e1Result
-          . E.save e2 e2Result
-          . E.save e3 e3Result
-          . E.save e4 e4Result
-          . E.save e5 e5Result
-          . E.save e6 e6Result
-          . E.save e7 e7Result
-          . E.save e8 e8Result
-          . E.save e9 e9Result
-          . E.save e10 e10Result)
+          $ E.save e1 e1Val
+          . E.save e2 e2Val
+          . E.save e3 e3Val
+          . E.save e4 e4Val
+          . E.save e5 e5Val
+          . E.save e6 e6Val
+          . E.save e7 e7Val
+          . E.save e8 e8Val
+          . E.save e9 e9Val
+          . E.save e10 e10Val)
         (interpretExpression exp_e)

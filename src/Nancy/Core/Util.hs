@@ -86,8 +86,8 @@ renameTrailVar trailRenames oldTrailVar =
       Nothing -> oldTrailVar
 
 renameWitnessTrailVars :: [L.TrailRename] -> L.Witness -> L.Witness
-renameWitnessTrailVars params (L.TruthHypothesisW t) =
-  L.TruthHypothesisW (renameTypeTrailVars params t)
+renameWitnessTrailVars params (L.TruthHypothesisW s) =
+  L.TruthHypothesisW s
 renameWitnessTrailVars _ (L.ConstantIntW n) = L.ConstantIntW n
 renameWitnessTrailVars _ (L.ConstantBoolW b) = L.ConstantBoolW b
 renameWitnessTrailVars params (L.AbstractionW t p) =
@@ -245,10 +245,8 @@ computeWitness (L.Boolean b) =
   return $ L.ConstantBoolW b
 computeWitness (L.Brack exp) =
   computeWitness exp
-computeWitness (L.Id x) = do
-  (tEnv, _, _) <- ask
-  (_, w) <- loadE x (Err.TruthVarUndefined x) tEnv
-  return w
+computeWitness (L.Id x) =
+  return $ L.TruthHypothesisW x
 computeWitness (L.Abs x t b) = do
   bodyWitness <- computeWitness b
   return $ L.AbstractionW t bodyWitness

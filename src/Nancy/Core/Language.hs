@@ -20,7 +20,7 @@ instance Pretty Type where
   pPrint (TrailReplacementT t) = text "trl" <+> pPrint t
 
 data Witness
-  = TruthHypothesisW Type
+  = TruthHypothesisW String
   | ConstantIntW Int
   | ConstantBoolW Bool
   | AbstractionW Type Witness
@@ -32,7 +32,7 @@ data Witness
   deriving (Eq, Show)
 
 instance Pretty Witness where
-  pPrint (TruthHypothesisW t) = pPrint t
+  pPrint (TruthHypothesisW s) = text s
   pPrint (ConstantIntW i) = text (show i)
   pPrint (ConstantBoolW b) = text (show b)
   pPrint (AbstractionW t p) =
@@ -173,4 +173,4 @@ instance Pretty Value where
 
 type ValuePair = (Value, Witness)
 
-type InterpretEnv = (Env ValuePair, Env Value, Env Trail)
+type InterpretEnv = (Env Value, Env Value, Env Trail)

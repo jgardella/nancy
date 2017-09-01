@@ -76,7 +76,7 @@ idType =
           (Env.empty),
           (Env.empty))
         )
-        (IntT, TruthHypothesisW IntT)
+        (IntT, TruthHypothesisW "x")
   ]
 
 arrowType =
@@ -89,7 +89,7 @@ arrowType =
   , testCase "parameter usage" $
       assertRight ""
         (typecheck "fun (x:int) -> x")
-        (ArrowT IntT IntT, AbstractionW IntT (TruthHypothesisW IntT))
+        (ArrowT IntT IntT, AbstractionW IntT (TruthHypothesisW "x"))
   ]
 
 application =
@@ -107,7 +107,7 @@ application =
         (typecheck "(fun (x:int) -> x) 1")
         (IntT,
           ApplicationW
-            (AbstractionW IntT (TruthHypothesisW IntT))
+            (AbstractionW IntT (TruthHypothesisW "x"))
             (ConstantIntW 1))
   , testCase "expected arrow" $
     assertTypecheckErr ""
@@ -131,11 +131,11 @@ auditedVar =
         (typecheck "!u true")
         (
           (BoxT "u"
-            (Map.fromList [("u", (Reflexivity $ TruthHypothesisW IntT))])
+            (Map.fromList [("u", (Reflexivity $ TruthHypothesisW ""))])
             (ConstantBoolW True)
             BoolT),
           BoxIntroductionW
-            (Map.fromList [("u", (Reflexivity $ TruthHypothesisW IntT))])
+            (Map.fromList [("u", (Reflexivity $ TruthHypothesisW ""))])
             (ConstantBoolW True)
         )
   , testCase "audited composition" $
@@ -148,25 +148,25 @@ auditedVar =
           \   <y->x | u> 3")
         ((BoxT
           "x"
-          (Map.fromList [("x", Reflexivity (TruthHypothesisW IntT))])
+          (Map.fromList [("x", Reflexivity (TruthHypothesisW ""))])
           (BoxEliminationW "y"
             (ArrowT IntT BoolT)
             (ApplicationW
               (ValidityHypothesisW "u" [TrailRename {old = "y", new = "x"}])
               (ConstantIntW 3))
             (BoxIntroductionW
-              (Map.fromList [("y", Reflexivity (TruthHypothesisW IntT))])
+              (Map.fromList [("y", Reflexivity (TruthHypothesisW ""))])
               (AbstractionW IntT (ConstantBoolW True))))
           BoolT),
         (BoxIntroductionW
-          (Map.fromList [("x", Reflexivity (TruthHypothesisW IntT))])
+          (Map.fromList [("x", Reflexivity (TruthHypothesisW ""))])
           (BoxEliminationW "y"
             (ArrowT IntT BoolT)
             (ApplicationW
                (ValidityHypothesisW "u" [TrailRename {old = "y", new = "x"}])
                (ConstantIntW 3))
             (BoxIntroductionW
-              (Map.fromList [("y", Reflexivity (TruthHypothesisW IntT))])
+              (Map.fromList [("y", Reflexivity (TruthHypothesisW ""))])
               (AbstractionW IntT (ConstantBoolW True))))))
   , testCase "invalid rename domain" $
       assertTypecheckErr ""
@@ -204,30 +204,30 @@ auditedVar =
           \   ]\
           \  )")
         ((BoxT "e"
-          (Map.fromList [("e",Reflexivity (TruthHypothesisW IntT))])
+          (Map.fromList [("e",Reflexivity (TruthHypothesisW ""))])
           (TrailInspectionW "e"
             (ConstantBoolW False)
-            (TruthHypothesisW BoolT)
-            (TruthHypothesisW BoolT)
+            (TruthHypothesisW "x")
+            (TruthHypothesisW "x")
             (ConstantBoolW True)
             (ConstantBoolW True)
             (ConstantBoolW False)
-            (TruthHypothesisW BoolT)
-            (TruthHypothesisW BoolT)
-            (TruthHypothesisW BoolT)
+            (TruthHypothesisW "x")
+            (TruthHypothesisW "x")
+            (TruthHypothesisW "x")
             (ConstantBoolW True))
           BoolT),
         (BoxIntroductionW
-          (Map.fromList [("e",Reflexivity (TruthHypothesisW IntT))])
+          (Map.fromList [("e",Reflexivity (TruthHypothesisW ""))])
           (TrailInspectionW "e"
             (ConstantBoolW False)
-            (TruthHypothesisW BoolT)
-            (TruthHypothesisW BoolT)
+            (TruthHypothesisW "x")
+            (TruthHypothesisW "x")
             (ConstantBoolW True)
             (ConstantBoolW True)
             (ConstantBoolW False)
-            (TruthHypothesisW BoolT)
-            (TruthHypothesisW BoolT)
-            (TruthHypothesisW BoolT)
+            (TruthHypothesisW "x")
+            (TruthHypothesisW "x")
+            (TruthHypothesisW "x")
             (ConstantBoolW True))))
   ]

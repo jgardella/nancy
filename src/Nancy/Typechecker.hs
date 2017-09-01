@@ -48,7 +48,7 @@ typecheckExpression (Brack exp) =
 typecheckExpression (Id x) = do
   (tEnv, _, _) <- ask
   t <- E.loadE x (Err.TruthVarUndefined x) tEnv
-  return (t, L.TruthHypothesisW t)
+  return (t, L.TruthHypothesisW x)
 typecheckExpression (Abs x t b) = do
   (returnType, returnProof) <- local (updateTruthEnv $ E.save x t) (typecheckExpression b)
   return (L.ArrowT t returnType, L.AbstractionW t returnProof)
@@ -80,12 +80,12 @@ typecheckExpression (AuditedVar trailRenames u) = do
             throwError (Err.InvalidRenameCodomain initialTrailVars codomain)
     t -> throwError (Err.ValidityVarWrongType u validityVar)
 typecheckExpression (AuditedUnit trailVar exp) = do
-  let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty
+  let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW "") E.empty
   (expType, expProof) <- local updateEnvs (typecheckExpression exp)
   return (L.BoxT trailVar newTrailEnv expProof expType, L.BoxIntroductionW newTrailEnv expProof)
   where
     updateEnvs (_, wEnv, eEnv) =
-      (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW L.IntT) E.empty)
+      (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW "") E.empty)
 typecheckExpression (AuditedComp u typ arg body) = do
   (argType, argProof) <- typecheckExpression arg
   case argType of
