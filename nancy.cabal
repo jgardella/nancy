@@ -1,16 +1,20 @@
 name:                nancy
 version:             0.1.0.0
--- synopsis:
--- description:
+synopsis:            A programming langauge supporting computational provenance
+description:         A lexer, parser, typechecker and interpreter for a programming
+                     language supporting computational provenance.
 license:             MIT
 license-file:        LICENSE
 author:              Jason Gardella
 maintainer:          jason.a.gardella@gmail.com
--- copyright:
 category:            Language
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
+
+source-repository head
+  type: git
+  location: git://github.com/jgardella/nancy.git
 
 library
   hs-source-dirs:
