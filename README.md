@@ -4,8 +4,10 @@ An programming language supporting computational provenance.
 
 ## Build
 
-Run `gen.sh` to generate the lexer and parser.
+`gen.sh` to generate the lexer and parser.
 
-Run `cabal install` to install packages.
+`stack setup` to install GHC.
 
-Run `cabal build` to build executables.
+`stack install` to build executables.
+
+`stack test` to run tests.
