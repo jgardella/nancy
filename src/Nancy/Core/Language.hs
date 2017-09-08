@@ -131,20 +131,28 @@ data Exp
   | AuditedVar [TrailRename] String
   | AuditedUnit String Exp
   | AuditedComp String Type Exp Exp
-  | TrailInspect String TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap
+  | TrailInspect String ReflexivityM SymmetryM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM ReplacementM
   deriving (Eq, Show)
 
-data TrailMap
-  = ReflexivityM Exp
-  | SymmetryM String Exp
-  | TransitivityM String String Exp
-  | BetaM Exp
-  | BetaBoxM Exp
-  | TrailInspectionM Exp
-  | AbstractionM String Exp
-  | ApplicationM String String Exp
-  | LetM String String Exp
-  | ReplacementM String String String String String String String String String String Exp
+data ReflexivityM = ReflexivityM Exp
+  deriving (Eq, Show)
+data SymmetryM = SymmetryM String Exp
+  deriving (Eq, Show)
+data TransitivityM = TransitivityM String String Exp
+  deriving (Eq, Show)
+data BetaM = BetaM Exp
+  deriving (Eq, Show)
+data BetaBoxM = BetaBoxM Exp
+  deriving (Eq, Show)
+data TrailInspectionM = TrailInspectionM Exp
+  deriving (Eq, Show)
+data AbstractionM = AbstractionM String Exp
+  deriving (Eq, Show)
+data ApplicationM = ApplicationM String String Exp
+  deriving (Eq, Show)
+data LetM = LetM String String Exp
+  deriving (Eq, Show)
+data ReplacementM = ReplacementM String String String String String String String String String String Exp
   deriving (Eq, Show)
 
 data TrailRename = TrailRename {

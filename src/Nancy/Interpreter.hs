@@ -114,10 +114,10 @@ interpretExpression
     (L.TransitivityM t1 t2 exp_t)
     (L.BetaM exp_ba)
     (L.BetaBoxM exp_bb)
+    (L.TrailInspectionM exp_ti)
     (L.AbstractionM abs exp_abs)
     (L.ApplicationM app1 app2 exp_app)
     (L.LetM let1 let2 exp_let)
-    (L.TrailInspectionM exp_ti)
     (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
     = do
   witness <- computeWitness inspect
