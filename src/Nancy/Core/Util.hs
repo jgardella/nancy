@@ -8,6 +8,7 @@ import Data.List
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.State
 
 data ValidityVarSubParams =
   ValidityVarSubParams {
@@ -238,7 +239,7 @@ getSource (L.TrailInspectionT
     (getSource letTrl)
     (getSource trplTrl)
 
-computeWitness :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE Identity) L.Witness
+computeWitness :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE (StateT (Maybe L.Trail) Identity)) L.Witness
 computeWitness (L.Number n) =
   return $ L.ConstantIntW n
 computeWitness (L.Boolean b) =
@@ -258,7 +259,7 @@ computeWitness (L.AuditedVar trailRenames u) =
   return $ L.ValidityHypothesisW u trailRenames
 computeWitness (L.AuditedUnit trailVar exp) = do
   (_, _, eEnv) <- ask
-  trail <- loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
+  trail <- loadES trailVar (Err.TrailVarUndefined trailVar) eEnv
   return $ L.BoxIntroductionW eEnv (getSource trail)
 computeWitness (L.AuditedComp u typ arg body) = do
   argWitness <- computeWitness arg

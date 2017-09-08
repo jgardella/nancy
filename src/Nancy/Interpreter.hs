@@ -9,13 +9,14 @@ import Nancy.Core.Errors.Interpreter as Err
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.State
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
-type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE Identity) ValuePair
+type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (StateT (Maybe Trail) Identity)) ValuePair
 
-runInterpretM :: InterpretEnv -> InterpretM -> Either Err.InterpreterE ValuePair
-runInterpretM env m = runIdentity (runExceptT (runReaderT m env))
+runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePair, Maybe Trail)
+runInterpretM env m = runIdentity (runStateT (runExceptT (runReaderT m env)) Nothing)
 
 updateTruthEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateTruthEnv f (tEnv, wEnv, eEnv) =
@@ -28,66 +29,83 @@ updateWitnessEnv f (tEnv, wEnv, eEnv) =
 interpretProgram :: InterpretEnv -> Program -> Either NancyError ValuePair
 interpretProgram env (Program exp) =
   case runInterpretM env (interpretExpression exp) of
-    (Right x) -> Right x
-    (Left x) -> Left $ InterpretErr x
+    (Right x, _) -> Right x
+    (Left x, _) -> Left $ InterpretErr x
 
 interpretExpression :: Exp -> InterpretM
 interpretExpression (Number n) =
-  return (IntV n, L.ConstantIntW n)
+  return (IntV n, L.Reflexivity $ L.ConstantIntW n)
 interpretExpression (Boolean b) =
-  return (BoolV b, L.ConstantBoolW b)
+  return (BoolV b, L.Reflexivity $ L.ConstantBoolW b)
 interpretExpression (Brack exp) =
   interpretExpression exp
 interpretExpression (Id x) = do
   (tEnv, _, _) <- ask
-  v <- E.loadE x (Err.TruthVarUndefined x) tEnv
-  return (v, L.TruthHypothesisW x)
+  v <- E.loadES x (Err.TruthVarUndefined x) tEnv
+  return (v, L.Reflexivity $ L.TruthHypothesisW x)
 interpretExpression (Abs x t b) = do
   env <- ask
   witness <- computeWitness (Abs x t b)
-  return (ArrowV env x b, witness)
+  return (ArrowV env x t b, L.Reflexivity witness)
 interpretExpression (App x y) = do
-  (xVal, _) <- interpretExpression x
-  witness <- computeWitness (App x y)
+  (xVal, xTrail) <- interpretExpression x
   case xVal of
-    (ArrowV env var body) -> do
-      (yVal, yWitness) <- interpretExpression y
-      (value, _) <- local (updateTruthEnv (E.save var yVal) . const env) (interpretExpression body)
-      return (value, witness)
+    (ArrowV env var typ body) -> do
+      (yVal, yTrail) <- interpretExpression y
+      (value, valueTrail) <- local (updateTruthEnv (E.save var yVal) . const env) (interpretExpression body)
+      xWitness <- computeWitness x
+      yWitness <- computeWitness y
+      let newTrail = L.Transitivity (L.AppCompat xTrail yTrail) (L.Beta typ xWitness yWitness)
+      currentTrail <- get
+      case currentTrail of
+        Just trail -> put $ Just $ L.Transitivity trail newTrail
+        Nothing -> put $ Just newTrail
+      return (value, newTrail)
     _ ->
       throwError (Err.ExpectedArrow xVal)
 interpretExpression (AuditedVar trailRenames u) = do
   (_, wEnv, eEnv) <- ask
   witness <- computeWitness (AuditedVar trailRenames u)
-  validityVar <- E.loadE u (Err.ValidityVarUndefined u) wEnv
+  validityVar <- E.loadES u (Err.ValidityVarUndefined u) wEnv
   case validityVar of
     (L.BoxV s trailEnv witness value) -> do
       newTrailEnv <- renameTrailVars trailEnv
-      return (value, witness)
+      return (value, L.Reflexivity witness)
     _ -> throwError (Err.ExpectedBox validityVar)
   where
     renameTrailVars trailEnv =
       foldl (\result TrailRename{old=old, new=new} -> do
         newTrailEnv <- result
-        value <- E.loadE old (Err.InvalidTrailRename old) trailEnv
+        value <- E.loadES old (Err.InvalidTrailRename old) trailEnv
         return $ E.save new value newTrailEnv)
       (return E.empty)
       trailRenames
 interpretExpression (AuditedUnit trailVar exp) = do
-  -- TODO: save current trail
-  let newTrailEnv = E.save trailVar (L.Reflexivity $ L.TruthHypothesisW "") E.empty
-  (expValue, expWitness) <- local updateEnvs (interpretExpression exp)
-  return (L.BoxV trailVar newTrailEnv expWitness expValue, L.BoxIntroductionW newTrailEnv expWitness)
+  currentTrail <- get
+  let newTrailEnv =
+        case currentTrail of
+          Just trail -> E.save trailVar trail E.empty
+          Nothing -> E.empty
+  (expValue, expTrail) <- local (updateEnvs newTrailEnv) (interpretExpression exp)
+  expWitness <- computeWitness exp
+  return (L.BoxV trailVar newTrailEnv expWitness expValue, expTrail)
   where
-    updateEnvs (_, wEnv, eEnv) =
-      (E.empty, wEnv, E.save trailVar (L.Reflexivity $ L.TruthHypothesisW "") E.empty)
+    updateEnvs newTrailEnv (_, wEnv, eEnv) =
+      (E.empty, wEnv, newTrailEnv)
 interpretExpression (AuditedComp u typ arg body) = do
-  (argValue, argWitness) <- interpretExpression arg
+  (argValue, argTrail) <- interpretExpression arg
   case argValue of
     (L.BoxV s trailEnv w v) -> do
-      (bodyValue, bodyWitness) <- local (updateWitnessEnv $ E.save u argValue) (interpretExpression body)
-      -- TODO: substitution
-      return (bodyValue, L.BoxEliminationW u typ bodyWitness argWitness)
+      (bodyValue, bodyTrail) <- local (updateWitnessEnv $ E.save u argValue) (interpretExpression body)
+      argWitness <- computeWitness arg
+      bodyWitness <- computeWitness body
+      let newTrail =
+            L.Transitivity
+              (L.LetCompat u typ argTrail bodyTrail)
+              (L.BetaBox u typ argWitness bodyWitness)
+      newState <- E.loadES s (Err.TrailVarUndefined s) trailEnv
+      put $ Just newState
+      return (bodyValue, newTrail)
     t -> throwError (Err.ExpectedBox argValue)
 interpretExpression
   inspect@(TrailInspect trailVar
@@ -104,8 +122,13 @@ interpretExpression
     = do
   witness <- computeWitness inspect
   (tEnv, wEnv, eEnv) <- ask
-  trail <- E.loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
-  trailFold trail
+  trail <- E.loadES trailVar (Err.TrailVarUndefined trailVar) eEnv
+  (trailValue, trailTrail) <- trailFold trail
+  currentTrail <- get
+  case currentTrail of
+    Just trail -> put $ Just (L.Transitivity trail trailTrail)
+    Nothing -> put $ Just trailTrail
+  return (trailValue, trailTrail)
   where
     trailFold (Reflexivity _) = interpretExpression exp_r
     trailFold (Symmetry trl) = do

@@ -132,7 +132,6 @@ data Exp
   | AuditedUnit String Exp
   | AuditedComp String Type Exp Exp
   | TrailInspect String TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap TrailMap
-  | DerivedTerm Trail Exp
   deriving (Eq, Show)
 
 data TrailMap
@@ -160,17 +159,17 @@ instance Pretty TrailRename where
 data Value
   = IntV Int
   | BoolV Bool
-  | ArrowV InterpretEnv String Exp
+  | ArrowV InterpretEnv String Type Exp
   | BoxV String (Env Trail) Witness Value
   deriving (Eq, Show)
 
 instance Pretty Value where
   pPrint (IntV i) = int i
   pPrint (BoolV b) = text $ show b
-  pPrint (ArrowV _ arg body) = text "(" <> text arg <+> text "->" <+> text (show body) <+> text ")"
+  pPrint (ArrowV _ arg typ body) = text "(" <> text arg <> text ":" <> pPrint typ <+> text "->" <+> text (show body) <+> text ")"
   pPrint (BoxV _ trailEnv witness value) =
     text "[" <> pPrint trailEnv <+> text "." <+> pPrint witness <> text "]" <+> pPrint value
 
-type ValuePair = (Value, Witness)
+type ValuePair = (Value, Trail)
 
 type InterpretEnv = (Env Value, Env Value, Env Trail)
