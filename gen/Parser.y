@@ -68,7 +68,6 @@ TI        : ti '->' Exp                      { TrailInspectionM $3 }
 ABS       : abs '(' id ')' '->' Exp          { AbstractionM $3 $6 }
 APP       : app '(' id id ')' '->' Exp       { ApplicationM $3 $4 $7 }
 LET       : let '(' id id ')' '->' Exp       { LetM $3 $4 $7 }
-TRPL      : trpl '(' id id id id id id id id id id ')' '->' Exp { ReplacementM $3 $4 $5 $6 $7 $8 $9 $10 $11 $12 $15 }
 Rename    : id '->' id                       { TrailRename $1 $3 }
 Renames   : Rename                           { [$1] }
           | Renames ';' Rename               { $3 : $1 }
@@ -82,7 +81,7 @@ Exp       : id                               { Id $1 }
           | '<' Renames '|' id '>'           { AuditedVar $2 $4 }
           | '!' id Exp                       { AuditedUnit $2 $3 }
           | let id ':' Type be Exp in Exp    { AuditedComp $2 $4 $6 $8 }
-          | id '[' R ';' S ';' T ';' BA ';' BB ';' TI ';' ABS ';' APP ';' LET ';' TRPL ']' { TrailInspect $1 $3 $5 $7 $9 $11 $13 $15 $17 $19 $21 }
+          | id '[' R ';' S ';' T ';' BA ';' BB ';' TI ';' ABS ';' APP ';' LET ']' { TrailInspect $1 $3 $5 $7 $9 $11 $13 $15 $17 $19 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a

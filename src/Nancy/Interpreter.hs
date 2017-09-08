@@ -117,8 +117,7 @@ interpretExpression
     (L.TrailInspectionM exp_ti)
     (L.AbstractionM abs exp_abs)
     (L.ApplicationM app1 app2 exp_app)
-    (L.LetM let1 let2 exp_let)
-    (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
+    (L.LetM let1 let2 exp_let))
     = do
   witness <- computeWitness inspect
   (tEnv, wEnv, eEnv) <- ask
@@ -151,28 +150,4 @@ interpretExpression
       (let1Val, _) <- trailFold trl1
       (let2Val, _) <- trailFold trl2
       local (updateTruthEnv $ E.save let1 let1Val . E.save let2 let2Val) (interpretExpression exp_let)
-    trailFold (TrailInspectionT _
-      trl1 trl2 trl3 trl4 trl5 trl6 trl7 trl8 trl9 trl10) = do
-      (e1Val, _) <- trailFold trl1
-      (e2Val, _) <- trailFold trl2
-      (e3Val, _) <- trailFold trl3
-      (e4Val, _) <- trailFold trl4
-      (e5Val, _) <- trailFold trl5
-      (e6Val, _) <- trailFold trl6
-      (e7Val, _) <- trailFold trl7
-      (e8Val, _) <- trailFold trl8
-      (e9Val, _) <- trailFold trl9
-      (e10Val, _) <- trailFold trl10
-      local
-        (updateTruthEnv
-          $ E.save e1 e1Val
-          . E.save e2 e2Val
-          . E.save e3 e3Val
-          . E.save e4 e4Val
-          . E.save e5 e5Val
-          . E.save e6 e6Val
-          . E.save e7 e7Val
-          . E.save e8 e8Val
-          . E.save e9 e9Val
-          . E.save e10 e10Val)
-        (interpretExpression exp_e)
+    trailFold TrailInspectionT{} = interpretExpression exp_ti

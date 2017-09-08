@@ -59,20 +59,8 @@ renameTrailVars params (L.LetCompat u t e1 e2) =
     (renameTypeTrailVars params t)
     (renameTrailVars params e1)
     (renameTrailVars params e2)
-renameTrailVars params
-  (L.TrailInspectionT s e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
-  L.TrailInspectionT
-    s
-    (renameTrailVars params e1)
-    (renameTrailVars params e2)
-    (renameTrailVars params e3)
-    (renameTrailVars params e4)
-    (renameTrailVars params e5)
-    (renameTrailVars params e6)
-    (renameTrailVars params e7)
-    (renameTrailVars params e8)
-    (renameTrailVars params e9)
-    (renameTrailVars params e10)
+renameTrailVars params (L.TrailInspectionT s w1 w2 w3 w4 w5 w6 w7 w8 w9) =
+  L.TrailInspectionT s w1 w2 w3 w4 w5 w6 w7 w8 w9
 
 renameEnvTrailVars :: [L.TrailRename] -> Env L.Trail -> Env L.Trail
 renameEnvTrailVars params =
@@ -105,7 +93,7 @@ renameWitnessTrailVars params (L.BoxEliminationW u t p1 p2) =
     (renameWitnessTrailVars params p1)
     (renameWitnessTrailVars params p2)
 renameWitnessTrailVars params
-  (L.TrailInspectionW s p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+  (L.TrailInspectionW s p1 p2 p3 p4 p5 p6 p7 p8 p9) =
   let newS = renameTrailVar params s in
     L.TrailInspectionW
       newS
@@ -118,7 +106,6 @@ renameWitnessTrailVars params
       (renameWitnessTrailVars params p7)
       (renameWitnessTrailVars params p8)
       (renameWitnessTrailVars params p9)
-      (renameWitnessTrailVars params p10)
 
 renameTypeTrailVars :: [L.TrailRename] -> L.Type -> L.Type
 renameTypeTrailVars _ L.IntT = L.IntT
@@ -183,7 +170,7 @@ subsituteWitnessValidityVars params (L.BoxEliminationW u t p1 p2) =
     (subsituteWitnessValidityVars params p1)
     (subsituteWitnessValidityVars params p2)
 subsituteWitnessValidityVars params
-  (L.TrailInspectionW e p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+  (L.TrailInspectionW e p1 p2 p3 p4 p5 p6 p7 p8 p9) =
   L.TrailInspectionW
     e
     (subsituteWitnessValidityVars params p1)
@@ -195,7 +182,6 @@ subsituteWitnessValidityVars params
     (subsituteWitnessValidityVars params p7)
     (subsituteWitnessValidityVars params p8)
     (subsituteWitnessValidityVars params p9)
-    (subsituteWitnessValidityVars params p10)
 
 getSource :: L.Trail -> L.Witness
 getSource (L.Reflexivity witness) =
@@ -216,28 +202,26 @@ getSource (L.LetCompat u typ trl1 trl2) =
   L.BoxEliminationW u typ (getSource trl1) (getSource trl2)
 getSource (L.TrailInspectionT
     s
-    rTrl
-    sTrl
-    tTrl
-    baTrl
-    bbTrl
-    tiTrl
-    absTrl
-    appTrl
-    letTrl
-    trplTrl) =
+    rWit
+    sWit
+    tWit
+    baWit
+    bbWit
+    tiWit
+    absWit
+    appWit
+    letWit) =
   L.TrailInspectionW
     s
-    (getSource rTrl)
-    (getSource sTrl)
-    (getSource tTrl)
-    (getSource baTrl)
-    (getSource bbTrl)
-    (getSource tiTrl)
-    (getSource absTrl)
-    (getSource appTrl)
-    (getSource letTrl)
-    (getSource trplTrl)
+    rWit
+    sWit
+    tWit
+    baWit
+    bbWit
+    tiWit
+    absWit
+    appWit
+    letWit
 
 computeWitness :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE (StateT (Maybe L.Trail) Identity)) L.Witness
 computeWitness (L.Number n) =
@@ -275,8 +259,7 @@ computeWitness
     (L.TrailInspectionM exp_ti)
     (L.AbstractionM abs1 exp_abs)
     (L.ApplicationM app1 app2 exp_app)
-    (L.LetM let1 let2 exp_let)
-    (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
+    (L.LetM let1 let2 exp_let))
     = do
   rWitness <- computeWitness exp_r
   sWitness <- computeWitness exp_s
@@ -287,7 +270,6 @@ computeWitness
   absWitness <- computeWitness exp_abs
   appWitness <- computeWitness exp_app
   letWitness <- computeWitness exp_let
-  trplWitness <- computeWitness exp_e
   return $ L.TrailInspectionW
     trailVar
     rWitness
@@ -299,4 +281,3 @@ computeWitness
     absWitness
     appWitness
     letWitness
-    trplWitness

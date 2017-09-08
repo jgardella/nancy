@@ -28,7 +28,7 @@ data Witness
   | ValidityHypothesisW String [TrailRename]
   | BoxIntroductionW (Env Trail) Witness
   | BoxEliminationW String Type Witness Witness
-  | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness Witness
+  | TrailInspectionW String Witness Witness Witness Witness Witness Witness Witness Witness Witness
   deriving (Eq, Show)
 
 instance Pretty Witness where
@@ -45,7 +45,7 @@ instance Pretty Witness where
     vcat [ text "LET("
          , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint p1 <> text ",")
          , nest 2 (pPrint p2 <> text ")")]
-  pPrint (TrailInspectionW s p1 p2 p3 p4 p5 p6 p7 p8 p9 p10) =
+  pPrint (TrailInspectionW s p1 p2 p3 p4 p5 p6 p7 p8 p9) =
     vcat [ text "r ->" <+> pPrint p1
          , text "s ->" <+> pPrint p2
          , text "t ->" <+> pPrint p3
@@ -54,8 +54,7 @@ instance Pretty Witness where
          , text "ti ->" <+> pPrint p6
          , text "abs ->" <+> pPrint p7
          , text "app ->" <+> pPrint p8
-         , text "let ->" <+> pPrint p9
-         , text "trpl ->" <+> pPrint p10 ]
+         , text "let ->" <+> pPrint p9]
 
 data Trail
     = Reflexivity Witness
@@ -66,7 +65,7 @@ data Trail
     | AbsCompat Type Trail
     | AppCompat Trail Trail
     | LetCompat String Type Trail Trail
-    | TrailInspectionT String Trail Trail Trail Trail Trail Trail Trail Trail Trail Trail
+    | TrailInspectionT String Witness Witness Witness Witness Witness Witness Witness Witness Witness
     deriving (Eq, Show)
 
 instance Pretty Trail where
@@ -104,18 +103,17 @@ instance Pretty Trail where
          , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint e1 <> text ",")
          , nest 2 (pPrint e2)
          , text ")"]
-  pPrint (TrailInspectionT s e1 e2 e3 e4 e5 e6 e7 e8 e9 e10) =
-    vcat [ text "trpl("
-         , nest 2 (pPrint e1 <> text ",")
-         , nest 2 (pPrint e2 <> text ",")
-         , nest 2 (pPrint e3 <> text ",")
-         , nest 2 (pPrint e4 <> text ",")
-         , nest 2 (pPrint e5 <> text ",")
-         , nest 2 (pPrint e6 <> text ",")
-         , nest 2 (pPrint e7 <> text ",")
-         , nest 2 (pPrint e8 <> text ",")
-         , nest 2 (pPrint e9 <> text ",")
-         , nest 2 (pPrint e10 )
+  pPrint (TrailInspectionT s w1 w2 w3 w4 w5 w6 w7 w8 w9) =
+    vcat [ text "ti(" <> text s <> text ","
+         , nest 2 (pPrint w1 <> text ",")
+         , nest 2 (pPrint w2 <> text ",")
+         , nest 2 (pPrint w3 <> text ",")
+         , nest 2 (pPrint w4 <> text ",")
+         , nest 2 (pPrint w5 <> text ",")
+         , nest 2 (pPrint w6 <> text ",")
+         , nest 2 (pPrint w7 <> text ",")
+         , nest 2 (pPrint w8 <> text ",")
+         , nest 2 (pPrint w9 )
          , text ")"]
 
 newtype Program = Program Exp
@@ -131,28 +129,26 @@ data Exp
   | AuditedVar [TrailRename] String
   | AuditedUnit String Exp
   | AuditedComp String Type Exp Exp
-  | TrailInspect String ReflexivityM SymmetryM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM ReplacementM
+  | TrailInspect String ReflexivityM SymmetryM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM
   deriving (Eq, Show)
 
-data ReflexivityM = ReflexivityM Exp
+newtype ReflexivityM = ReflexivityM Exp
   deriving (Eq, Show)
 data SymmetryM = SymmetryM String Exp
   deriving (Eq, Show)
 data TransitivityM = TransitivityM String String Exp
   deriving (Eq, Show)
-data BetaM = BetaM Exp
+newtype BetaM = BetaM Exp
   deriving (Eq, Show)
-data BetaBoxM = BetaBoxM Exp
+newtype BetaBoxM = BetaBoxM Exp
   deriving (Eq, Show)
-data TrailInspectionM = TrailInspectionM Exp
+newtype TrailInspectionM = TrailInspectionM Exp
   deriving (Eq, Show)
 data AbstractionM = AbstractionM String Exp
   deriving (Eq, Show)
 data ApplicationM = ApplicationM String String Exp
   deriving (Eq, Show)
 data LetM = LetM String String Exp
-  deriving (Eq, Show)
-data ReplacementM = ReplacementM String String String String String String String String String String Exp
   deriving (Eq, Show)
 
 data TrailRename = TrailRename {

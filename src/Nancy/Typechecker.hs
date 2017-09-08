@@ -104,8 +104,7 @@ typecheckExpression
     (L.TrailInspectionM exp_ti)
     (L.AbstractionM abs1 exp_abs)
     (L.ApplicationM app1 app2 exp_app)
-    (L.LetM let1 let2 exp_let)
-    (L.ReplacementM e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 exp_e))
+    (L.LetM let1 let2 exp_let))
     = do
   (_, _, eEnv) <- ask
   trail <- E.loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
@@ -118,9 +117,8 @@ typecheckExpression
   (absType, absProof) <- local (updateForAbs rType) (typecheckExpression exp_abs)
   (appType, appProof) <- local (updateForApp rType) (typecheckExpression exp_app)
   (letType, letProof) <- local (updateForLet rType) (typecheckExpression exp_let)
-  (eType, eProof) <- local keepTruthEnv (typecheckExpression exp_e)
-  if allEqual [rType, sType, tType, baType, bbType, tiType, absType, appType, letType, eType] then
-    return (rType, L.TrailInspectionW trailVar rProof sProof tProof baProof bbProof tiProof absProof appProof letProof eProof)
+  if allEqual [rType, sType, tType, baType, bbType, tiType, absType, appType, letType] then
+    return (rType, L.TrailInspectionW trailVar rProof sProof tProof baProof bbProof tiProof absProof appProof letProof)
   else throwError Err.InconsistentTrailMappings
   where
     keepTruthEnv (tEnv, _, _) = (tEnv, E.empty, E.empty)
