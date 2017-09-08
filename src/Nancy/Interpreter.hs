@@ -13,10 +13,10 @@ import Control.Monad.State
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
-type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (StateT (Maybe Trail) Identity)) ValuePair
+type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (StateT Trail Identity)) ValuePair
 
-runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePair, Maybe Trail)
-runInterpretM env m = runIdentity (runStateT (runExceptT (runReaderT m env)) Nothing)
+runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePair, Trail)
+runInterpretM env m = runIdentity (runStateT (runExceptT (runReaderT m env)) L.EmptyT)
 
 updateTruthEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateTruthEnv f (tEnv, wEnv, eEnv) =
@@ -57,9 +57,7 @@ interpretExpression (App x y) = do
       yWitness <- computeWitness y
       let newTrail = L.Transitivity (L.AppCompat xTrail yTrail) (L.Beta typ xWitness yWitness)
       currentTrail <- get
-      case currentTrail of
-        Just trail -> put $ Just $ L.Transitivity trail newTrail
-        Nothing -> put $ Just newTrail
+      put $ L.Transitivity currentTrail newTrail
       return (value, newTrail)
     _ ->
       throwError (Err.ExpectedArrow xVal)
@@ -82,10 +80,7 @@ interpretExpression (AuditedVar trailRenames u) = do
       trailRenames
 interpretExpression (AuditedUnit trailVar exp) = do
   currentTrail <- get
-  let newTrailEnv =
-        case currentTrail of
-          Just trail -> E.save trailVar trail E.empty
-          Nothing -> E.empty
+  let newTrailEnv = E.save trailVar currentTrail E.empty
   (expValue, expTrail) <- local (updateEnvs newTrailEnv) (interpretExpression exp)
   expWitness <- computeWitness exp
   return (L.BoxV trailVar newTrailEnv expWitness expValue, expTrail)
@@ -103,8 +98,7 @@ interpretExpression (AuditedComp u typ arg body) = do
             L.Transitivity
               (L.LetCompat u typ argTrail bodyTrail)
               (L.BetaBox u typ argWitness bodyWitness)
-      newState <- E.loadES s (Err.TrailVarUndefined s) trailEnv
-      put $ Just newState
+      put newTrail
       return (bodyValue, newTrail)
     t -> throwError (Err.ExpectedBox argValue)
 interpretExpression
@@ -121,12 +115,10 @@ interpretExpression
     = do
   witness <- computeWitness inspect
   (tEnv, wEnv, eEnv) <- ask
-  trail <- E.loadES trailVar (Err.TrailVarUndefined trailVar) eEnv
+  trail <- E.loadES trailVar (Err.TrailVarUndefined trailVar eEnv) eEnv
   (trailValue, trailTrail) <- trailFold trail
   currentTrail <- get
-  case currentTrail of
-    Just trail -> put $ Just (L.Transitivity trail trailTrail)
-    Nothing -> put $ Just trailTrail
+  put $ L.Transitivity currentTrail trailTrail
   return (trailValue, trailTrail)
   where
     trailFold (Reflexivity _) = interpretExpression exp_r

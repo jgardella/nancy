@@ -57,7 +57,8 @@ instance Pretty Witness where
          , text "let ->" <+> pPrint p9]
 
 data Trail
-    = Reflexivity Witness
+    = EmptyT
+    | Reflexivity Witness
     | Symmetry Trail
     | Transitivity Trail Trail
     | Beta Type Witness Witness
@@ -69,6 +70,7 @@ data Trail
     deriving (Eq, Show)
 
 instance Pretty Trail where
+  pPrint EmptyT = text "emptyT"
   pPrint (Reflexivity w) = text "r(" <> pPrint w <> text ")"
   pPrint (Symmetry t) =
     vcat [ text "s("
