@@ -58,8 +58,8 @@ interpretExpression (App x y) = do
     (ArrowV env var typ body) -> do
       (yVal, yTrail) <- interpretExpression y
       (value, valueTrail) <- local (updateTruthEnv (E.save var yVal) . const env) (interpretExpression body)
-      xWitness <- computeWitness x
-      yWitness <- computeWitness y
+      xWitness <- local (updateTruthEnv (E.save var yVal) . const env) (computeWitness x)
+      yWitness <- local (updateTruthEnv (E.save var yVal) . const env) (computeWitness y)
       let newTrail = L.Transitivity (L.AppCompat xTrail yTrail) (L.Beta typ xWitness yWitness)
       currentTrail <- get
       put $ L.Transitivity currentTrail newTrail
@@ -87,7 +87,7 @@ interpretExpression (AuditedUnit trailVar exp) = do
   currentTrail <- get
   let newTrailEnv = E.save trailVar currentTrail E.empty
   (expValue, expTrail) <- local (updateEnvs newTrailEnv) (interpretExpression exp)
-  expWitness <- computeWitness exp
+  expWitness <- local (updateEnvs newTrailEnv) (computeWitness exp)
   return (L.BoxV trailVar newTrailEnv expWitness expValue, expTrail)
   where
     updateEnvs newTrailEnv (_, wEnv, eEnv) =
@@ -97,8 +97,8 @@ interpretExpression (AuditedComp u typ arg body) = do
   case argValue of
     (L.BoxV s trailEnv w v) -> do
       (bodyValue, bodyTrail) <- local (updateWitnessEnv $ E.save u argValue) (interpretExpression body)
-      argWitness <- computeWitness arg
-      bodyWitness <- computeWitness body
+      argWitness <- local (updateTrailEnv $ const trailEnv) (computeWitness arg)
+      bodyWitness <- local (updateTrailEnv $ const trailEnv) (computeWitness body)
       let newTrail =
             L.Transitivity
               (L.LetCompat u typ argTrail bodyTrail)
