@@ -9,14 +9,15 @@ import Nancy.Core.Errors.Interpreter as Err
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Control.Monad.State
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
-type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (StateT Trail Identity)) ValuePair
+type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (WriterT [String] (StateT Trail Identity))) ValuePair
 
-runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePair, Trail)
-runInterpretM env m = runIdentity (runStateT (runExceptT (runReaderT m env)) L.EmptyT)
+runInterpretM :: InterpretEnv -> InterpretM -> ((Either Err.InterpreterE ValuePair, [String]), Trail)
+runInterpretM env m = runIdentity (runStateT (runWriterT (runExceptT (runReaderT m env))) L.EmptyT)
 
 updateTruthEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateTruthEnv f (tEnv, wEnv, eEnv) =
@@ -26,11 +27,15 @@ updateWitnessEnv :: (Env L.Value -> Env L.Value) -> InterpretEnv -> InterpretEnv
 updateWitnessEnv f (tEnv, wEnv, eEnv) =
   (tEnv, f wEnv, eEnv)
 
-interpretProgram :: InterpretEnv -> Program -> Either NancyError ValuePair
+updateTrailEnv :: (Env L.Trail -> Env L.Trail) -> InterpretEnv -> InterpretEnv
+updateTrailEnv f (tEnv, wEnv, eEnv) =
+  (tEnv, wEnv, f eEnv)
+
+interpretProgram :: InterpretEnv -> Program -> (Either NancyError ValuePair, [String])
 interpretProgram env (Program exp) =
   case runInterpretM env (interpretExpression exp) of
-    (Right x, _) -> Right x
-    (Left x, _) -> Left $ InterpretErr x
+    ((Right x, l), _) -> (Right x, l)
+    ((Left x, l), _) -> (Left $ InterpretErr x, l)
 
 interpretExpression :: Exp -> InterpretM
 interpretExpression (Number n) =

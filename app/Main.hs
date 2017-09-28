@@ -67,7 +67,8 @@ main = do
         (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
         (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn
     Interpret -> do
-      interpretResult <- fmap (parseAndInterpret $ fileName args) input
+      (interpretResult, logs) <- fmap (parseAndInterpret $ fileName args) input
+      mapM_ putStrLn logs
       case interpretResult of
         (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
         (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn

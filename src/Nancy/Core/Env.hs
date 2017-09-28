@@ -6,6 +6,7 @@ import Text.PrettyPrint.HughesPJClass
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Control.Monad.State
 
 type Env v = Map.Map String v
@@ -30,7 +31,7 @@ loadE s e env =
     (Just v) -> return v
     Nothing -> throwError e
 
-loadES :: String -> e -> Env v -> ReaderT y (ExceptT e (StateT s Identity)) v
+loadES :: String -> e -> Env v -> ReaderT y (ExceptT e (WriterT [String] (StateT s Identity))) v
 loadES s e env =
   case Map.lookup s env of
     (Just v) -> return v

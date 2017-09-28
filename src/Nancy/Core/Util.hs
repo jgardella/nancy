@@ -8,6 +8,7 @@ import Data.List
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Control.Monad.State
 
 data ValidityVarSubParams =
@@ -223,7 +224,7 @@ getSource (L.TrailInspectionT
     appWit
     letWit
 
-computeWitness :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE (StateT L.Trail Identity)) L.Witness
+computeWitness :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE (WriterT [String] (StateT L.Trail Identity))) L.Witness
 computeWitness (L.Number n) =
   return $ L.ConstantIntW n
 computeWitness (L.Boolean b) =

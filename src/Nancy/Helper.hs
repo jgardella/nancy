@@ -23,11 +23,13 @@ parseAndTypecheckWithEnv source input env = do
   parseResult <- parse source input
   typecheckProgram env parseResult
 
-parseAndInterpret :: FilePath -> String -> Either NancyError ValuePair
+parseAndInterpret :: FilePath -> String -> (Either NancyError ValuePair, [String])
 parseAndInterpret source input =
   parseAndInterpretWithEnv source input (Env.empty, Env.empty, Env.empty)
 
-parseAndInterpretWithEnv :: FilePath -> String -> InterpretEnv -> Either NancyError ValuePair
-parseAndInterpretWithEnv source input env = do
-  parseResult <- parse source input
-  interpretProgram env parseResult
+parseAndInterpretWithEnv :: FilePath -> String -> InterpretEnv -> (Either NancyError ValuePair, [String])
+parseAndInterpretWithEnv source input env =
+  case parse source input of
+    Right parseResult ->
+      interpretProgram env parseResult
+    Left err -> (Left err, [])
