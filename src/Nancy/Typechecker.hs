@@ -40,71 +40,75 @@ typecheckProgram env (Program exp) =
 
 typecheckExpression :: Exp -> TypecheckM
 typecheckExpression (Number n) =
-  return (L.IntT, L.IntWit n)
+  return (L.IntType, L.IntWit n)
 typecheckExpression (Boolean b) =
-  return (L.BoolT, L.BoolWit b)
-typecheckExpression (Brack exp) =
+  return (L.BoolType, L.BoolWit b)
+typecheckExpression (L.Brack exp) =
   typecheckExpression exp
-typecheckExpression (Id x) = do
+typecheckExpression (L.Var x) = do
   (tEnv, _) <- ask
   varType <- E.loadE x (Err.TruthVarUndefined x) tEnv
   return (varType, L.VarWit x)
-typecheckExpression (Abs arg argType body) = do
-  (returnType, returnProof) <- local (updateTruthEnv $ E.save arg argType) (typecheckExpression body)
-  return (L.ArrowT argType returnType, L.AbsWit arg argType returnProof)
+typecheckExpression (L.Lam arg argType body) = do
+  (returnType, returnWit) <- local (updateTruthEnv $ E.save arg argType) (typecheckExpression body)
+  return (L.ArrowType argType returnType, L.LamWit arg argType returnWit)
 typecheckExpression (App left right) = do
-  (leftType, leftProof) <- typecheckExpression left
+  (leftType, leftWit) <- typecheckExpression left
   case leftType of
-    (L.ArrowT argType returnType) -> do
-      (rightType, rightProof) <- typecheckExpression right
+    (L.ArrowType argType returnType) -> do
+      (rightType, rightWit) <- typecheckExpression right
       if rightType == argType
-      then return (returnType, L.AppWit leftProof rightProof)
+      then return (returnType, L.AppWit leftWit rightWit)
       else throwError (Err.InvalidArgType rightType argType)
     t ->
       throwError (Err.ExpectedArrow left leftType)
-typecheckExpression (AuditedVar u) = do
+typecheckExpression (AVar u) = do
   (_, wEnv) <- ask
   varType <- E.loadE u (Err.ValidityVarUndefined u) wEnv
   return (varType, L.AVarWit u)
-typecheckExpression (AuditedUnit body) = do
-  (bodyType, bodyProof) <- local (updateTruthEnv $ konst E.empty) (typecheckExpression body)
-  return (L.BoxT bodyProof bodyType, L.BangWit bodyProof)
-typecheckExpression (AuditedComp u uType arg body) = do
-  (argType, argProof) <- typecheckExpression arg
+typecheckExpression (Bang body) = do
+  (bodyType, bodyWit) <- local (updateTruthEnv $ const E.empty) (typecheckExpression body)
+  return (L.BoxType bodyWit bodyType, L.BangWit bodyWit)
+typecheckExpression (Let u uType arg body) = do
+  (argType, argWit) <- typecheckExpression arg
   case argType of
-    (L.BoxT boxProof boxType) | boxType == uType -> do
-      (bodyType, bodyProof) <- local (updateWitnessEnv $ E.save u boxType) (typecheckExpression body)
-      return (witSubOnType u boxProof bodyType, L.LetWit u uType bodyProof argProof)
-    (L.BoxT _ boxType) | boxType <> uType ->
+    (L.BoxType boxWit boxType) | boxType == uType -> do
+      (bodyType, bodyWit) <- local (updateWitnessEnv $ E.save u boxType) (typecheckExpression body)
+      return (witSubOnType u boxWit bodyType, L.LetWit u uType bodyWit argWit)
+    (L.BoxType _ boxType) | boxType /= uType ->
       throwError (Err.InvalidLetArgType uType boxType)
     t -> throwError (Err.ExpectedBox argType)
 typecheckExpression
-  (TrailInspect trailVar
-    (L.ReflexivityM exp_r)
-    (L.TransitivityM t1 t2 exp_t)
-    (L.BetaM exp_ba)
-    (L.BetaBoxM exp_bb)
-    (L.TrailInspectionM exp_ti)
-    (L.AbstractionM abs1 exp_abs)
-    (L.ApplicationM app1 app2 exp_app)
-    (L.LetM let1 let2 exp_let))
+  (Inspect
+    rExp
+    tExp
+    baExp
+    bbExp
+    tiExp
+    lamExp
+    appExp
+    letExp
+    trplExp)
     = do
-  (_, _, eEnv) <- ask
-  trail <- E.loadE trailVar (Err.TrailVarUndefined trailVar) eEnv
-  (rType, rProof) <- local keepTruthEnv (typecheckExpression exp_r)
-  (tType, tProof) <- local (updateForT rType) (typecheckExpression exp_t)
-  (baType, baProof) <- local keepTruthEnv (typecheckExpression exp_ba)
-  (bbType, bbProof) <- local keepTruthEnv (typecheckExpression exp_bb)
-  (tiType, tiProof) <- local keepTruthEnv (typecheckExpression exp_ti)
-  (absType, absProof) <- local (updateForAbs rType) (typecheckExpression exp_abs)
-  (appType, appProof) <- local (updateForApp rType) (typecheckExpression exp_app)
-  (letType, letProof) <- local (updateForLet rType) (typecheckExpression exp_let)
-  if allEqual [rType, tType, baType, bbType, tiType, absType, appType, letType] then
-    return (rType, L.TrailInspectionW rProof tProof baProof bbProof tiProof absProof appProof letProof)
+  (rType, rWit) <- local keepWitEnv (typecheckExpression rExp)
+  (tType, tWit) <- local keepWitEnv (typecheckExpression tExp)
+  (baType, baWit) <- local keepWitEnv (typecheckExpression baExp)
+  (bbType, bbWit) <- local keepWitEnv (typecheckExpression bbExp)
+  (tiType, tiWit) <- local keepWitEnv (typecheckExpression tiExp)
+  (lamType, lamWit) <- local keepWitEnv (typecheckExpression lamExp)
+  (appType, appWit) <- local keepWitEnv (typecheckExpression appExp)
+  (letType, letWit) <- local keepWitEnv (typecheckExpression letExp)
+  (trplType, trplWit) <- local keepWitEnv (typecheckExpression trplExp)
+  if allEqual [rType, baType, bbType, tiType]
+    && lamType == createArrowType rType 1
+    && tType == createArrowType rType 2
+    && appType == createArrowType rType 2
+    && letType == createArrowType rType 2
+    && trplType == createArrowType rType 9
+  then return (rType, L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)
   else throwError Err.InconsistentTrailMappings
   where
-    keepTruthEnv (tEnv, _, _) = (tEnv, E.empty, E.empty)
-    updateForT t = keepTruthEnv . updateTruthEnv (E.save t2 t . E.save t1 t)
-    updateForAbs t = keepTruthEnv . updateTruthEnv (E.save abs1 t)
-    updateForApp t = keepTruthEnv . updateTruthEnv (E.save app1 t . E.save app2 t)
-    updateForLet t = keepTruthEnv . updateTruthEnv (E.save let1 t . E.save let2 t)
+    keepWitEnv (_, wEnv) = (E.empty, wEnv)
+    createArrowType t n
+      | n <= 1 = L.ArrowType t t
+      | otherwise = L.ArrowType t (createArrowType t (n - 1))

@@ -31,10 +31,7 @@ tokens :-
   "}"                             { lex' TokenRBrace }
   "("                             { lex' TokenLParen }
   ")"                             { lex' TokenRParen }
-  "["                             { lex' TokenLSquare }
-  "]"                             { lex' TokenRSquare }
   ":"                             { lex' TokenColon }
-  ";"                             { lex' TokenSemi }
   "!"                             { lex' TokenBang }
   "."                             { lex' TokenDot }
   "r"                             { lex' TokenR }
@@ -83,12 +80,9 @@ data TokenClass
   | TokenRBrace
   | TokenLParen
   | TokenRParen
-  | TokenLSquare
-  | TokenRSquare
   | TokenDot
   | TokenBang
   | TokenColon
-  | TokenSemi
   | TokenR
   | TokenT
   | TokenBA

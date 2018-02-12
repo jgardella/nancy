@@ -26,12 +26,9 @@ import Nancy.Core.Errors
   '>'   { Token _ TokenRBrack }
   '('   { Token _ TokenLParen }
   ')'   { Token _ TokenRParen }
-  '['   { Token _ TokenLSquare }
-  ']'   { Token _ TokenRSquare }
   '{'   { Token _ TokenLBrace }
   '}'   { Token _ TokenRBrace }
   ':'   { Token _ TokenColon }
-  ';'   { Token _ TokenSemi }
   '!'   { Token _ TokenBang }
   '.'   { Token _ TokenDot }
   'r'   { Token _ TokenR }
@@ -54,20 +51,20 @@ import Nancy.Core.Errors
 %%
 
 Program   : Exp                              { Program $1 }
-Type      : int                              { IntT }
-          | bool                             { BoolT }
-          | Type '->' Type                   { ArrowT $1 $3 }
-Exp       : id                               { Id $1 }
+Type      : int                              { IntType }
+          | bool                             { BoolType }
+          | Type '->' Type                   { ArrowType $1 $3 }
+Exp       : id                               { Var $1 }
           | num                              { Number $1 }
           | true                             { Boolean True }
           | false                            { Boolean False }
           | '(' Exp ')'                      { Brack $2 }
-          | fun '(' id ':' Type ')' '->' Exp { Abs $3 $5 $8 }
+          | fun '(' id ':' Type ')' '->' Exp { Lam $3 $5 $8 }
           | Exp Exp                          { App $1 $2 }
-          | '<' id '>'                       { AuditedVar $2 }
-          | '!' Exp                          { AuditedUnit $2 }
-          | let id ':' Type be Exp in Exp    { AuditedComp $2 $4 $6 $8 }
-          | insp '['
+          | '<' id '>'                       { AVar $2 }
+          | '!' Exp                          { Bang $2 }
+          | let id ':' Type be Exp in Exp    { Let $2 $4 $6 $8 }
+          | insp '}'
               'r' '->' Exp
               't' '->' Exp
               ba '->' Exp
@@ -77,7 +74,7 @@ Exp       : id                               { Id $1 }
               app '->' Exp
               let '->' Exp
               trpl '->' Exp
-            ']' { TrailInspect $5 $8 $11 $14 $17 $20 $23 $26 $29 }
+            '}' { Inspect $5 $8 $11 $14 $17 $20 $23 $26 $29 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a

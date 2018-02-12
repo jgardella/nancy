@@ -130,26 +130,7 @@ data Exp
   | AVar String
   | Bang Exp
   | Let String Type Exp Exp
-  | Inspect ReflexivityM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM TrplM
-  deriving (Eq, Show)
-
-newtype ReflexivityM = ReflexivityM Exp
-  deriving (Eq, Show)
-data TransitivityM = TransitivityM String String Exp
-  deriving (Eq, Show)
-newtype BetaM = BetaM Exp
-  deriving (Eq, Show)
-newtype BetaBoxM = BetaBoxM Exp
-  deriving (Eq, Show)
-newtype TrailInspectionM = TrailInspectionM Exp
-  deriving (Eq, Show)
-data AbstractionM = AbstractionM String Exp
-  deriving (Eq, Show)
-data ApplicationM = ApplicationM String String Exp
-  deriving (Eq, Show)
-data LetM = LetM String String Exp
-  deriving (Eq, Show)
-data TrplM = TrplM String String String String String String String String String Exp
+  | Inspect Exp Exp Exp Exp Exp Exp Exp Exp Exp
   deriving (Eq, Show)
 
 data Value

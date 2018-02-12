@@ -115,25 +115,25 @@ getWit (L.Let u typ arg body) = do
   return $ L.LetWit u typ argWit bodyWit
 getWit
   (L.Inspect
-    (L.ReflexivityM exp_r)
-    (L.TransitivityM t1 t2 exp_t)
-    (L.BetaM exp_ba)
-    (L.BetaBoxM exp_bb)
-    (L.TrailInspectionM exp_ti)
-    (L.AbstractionM abs1 exp_abs)
-    (L.ApplicationM app1 app2 exp_app)
-    (L.LetM let1 let2 exp_let)
-    (L.TrplM r t ba bb ti lam app letArg trpl exp_trpl))
+    rExp
+    tExp
+    baExp
+    bbExp
+    tiExp
+    lamExp
+    appExp
+    letExp
+    trplExp)
     = do
-  rWit <- getWit exp_r
-  tWit <- getWit exp_t
-  baWit <- getWit exp_ba
-  bbWit <- getWit exp_bb
-  tiWit <- getWit exp_ti
-  absWit <- getWit exp_abs
-  appWit <- getWit exp_app
-  letWit <- getWit exp_let
-  trplWit <- getWit exp_trpl
+  rWit <- getWit rExp
+  tWit <- getWit tExp
+  baWit <- getWit baExp
+  bbWit <- getWit bbExp
+  tiWit <- getWit tiExp
+  absWit <- getWit lamExp
+  appWit <- getWit appExp
+  letWit <- getWit letExp
+  trplWit <- getWit trplExp
   return $ L.TiWit
     rWit
     tWit
