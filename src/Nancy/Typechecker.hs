@@ -74,8 +74,7 @@ typecheckExpression (AuditedComp u uType arg body) = do
   case argType of
     (L.BoxT boxProof boxType) | boxType == uType -> do
       (bodyType, bodyProof) <- local (updateWitnessEnv $ E.save u boxType) (typecheckExpression body)
-      let subsitutedBodyType = subsituteTypeValidityVars ValidityVarSubParams{u=u, trailEnv=trailEnv, p=p} bodyType in
-        return (subsitutedBodyType, L.BoxEliminationW s t bodyProof argProof)
+      return (witSubOnType u boxProof bodyType, L.LetWit u uType bodyProof argProof)
     (L.BoxT _ boxType) | boxType <> uType ->
       throwError (Err.InvalidLetArgType uType boxType)
     t -> throwError (Err.ExpectedBox argType)

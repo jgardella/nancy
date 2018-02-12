@@ -40,17 +40,17 @@ instance Pretty Witness where
   pPrint (LetWit u t p1 p2) =
     text "letwit(" <> text u <> text ":" <> pPrint t <> text ","
       <+> pPrint p1 <> text "," <+> pPrint p2 <> text ")"
-  pPrint (TiWit p1 p2 p3 p4 p5 p6 p7 p8 p9) =
+  pPrint (TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
     text "tiwit("
-      <> pPrint p1 <> text ","
-      <+> pPrint p2 <> text ","
-      <+> pPrint p3 <> text ","
-      <+> pPrint p4 <> text ","
-      <+> pPrint p5 <> text ","
-      <+> pPrint p6 <> text ","
-      <+> pPrint p7 <> text ","
-      <+> pPrint p8 <> text ","
-      <+> pPrint p9 <> text ")"
+      <> pPrint rWit <> text ","
+      <+> pPrint tWit <> text ","
+      <+> pPrint baWit <> text ","
+      <+> pPrint bbWit <> text ","
+      <+> pPrint tiWit <> text ","
+      <+> pPrint lamWit <> text ","
+      <+> pPrint appWit <> text ","
+      <+> pPrint letWit <> text ","
+      <+> pPrint trplWit <> text ")"
 
 data Trail
     = EmptyT
@@ -58,10 +58,11 @@ data Trail
     | TTrail Trail Trail
     | BaTrail String Type Witness Witness
     | BbTrail String Type Witness Witness
-    | AbsTrail Type Trail
+    | TiTrail Trail Witness Witness Witness Witness Witness Witness Witness Witness Witness
+    | LamTrail String Type Trail
     | AppTrail Trail Trail
     | LetTrail String Type Trail Trail
-    | TiTrail Witness Witness Witness Witness Witness Witness Witness Witness Witness
+    | TrplTrail Trail Trail Trail Trail Trail Trail Trail Trail Trail
     deriving (Eq, Show)
 
 instance Pretty Trail where
@@ -78,9 +79,20 @@ instance Pretty Trail where
          , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
          , nest 2 (pPrint w2)
          , text ")"]
-  pPrint (AbsTrail t e) =
-    vcat [ text "abs("
-         , nest 2 (text "a:" <> pPrint t <+> text "." <> pPrint e)
+  pPrint (TiTrail trail rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+    text "ti("
+      <> pPrint rWit <> text ","
+      <+> pPrint tWit <> text ","
+      <+> pPrint baWit <> text ","
+      <+> pPrint bbWit <> text ","
+      <+> pPrint tiWit <> text ","
+      <+> pPrint lamWit <> text ","
+      <+> pPrint appWit <> text ","
+      <+> pPrint letWit <> text ","
+      <+> pPrint trplWit <> text ")"
+  pPrint (LamTrail s t e) =
+    vcat [ text "lam("
+         , nest 2 (text s <> text ":" <> pPrint t <+> text "." <> pPrint e)
          , text ")"]
   pPrint (AppTrail e1 e2) =
     vcat [ text "app("
@@ -92,18 +104,18 @@ instance Pretty Trail where
          , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint e1 <> text ",")
          , nest 2 (pPrint e2)
          , text ")"]
-  pPrint (TiTrail w1 w2 w3 w4 w5 w6 w7 w8 w9) =
-    vcat [ text "ti("
-         , nest 2 (pPrint w1 <> text ",")
-         , nest 2 (pPrint w2 <> text ",")
-         , nest 2 (pPrint w3 <> text ",")
-         , nest 2 (pPrint w4 <> text ",")
-         , nest 2 (pPrint w5 <> text ",")
-         , nest 2 (pPrint w6 <> text ",")
-         , nest 2 (pPrint w7 <> text ",")
-         , nest 2 (pPrint w8 <> text ",")
-         , nest 2 (pPrint w9 )
-         , text ")"]
+  pPrint (TrplTrail rTrl tTrl baTrl bbTrl tiTrl lamTrl appTrl letTrl trplTrl) =
+    text "trpl("
+      <> pPrint rTrl <> text ","
+      <+> pPrint tTrl <> text ","
+      <+> pPrint baTrl <> text ","
+      <+> pPrint bbTrl <> text ","
+      <+> pPrint tiTrl <> text ","
+      <+> pPrint lamTrl <> text ","
+      <+> pPrint appTrl <> text ","
+      <+> pPrint letTrl <> text ","
+      <+> pPrint trplTrl <> text ")"
+
 
 newtype Program = Program Exp
   deriving Show
@@ -113,12 +125,12 @@ data Exp
   | Number Int
   | Boolean Bool
   | Brack Exp
-  | Abs String Type Exp
+  | Lam String Type Exp
   | App Exp Exp
   | AVar String
   | Bang Exp
   | Let String Type Exp Exp
-  | TrailInspect ReflexivityM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM
+  | Inspect ReflexivityM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM TrplM
   deriving (Eq, Show)
 
 newtype ReflexivityM = ReflexivityM Exp
@@ -136,6 +148,8 @@ data AbstractionM = AbstractionM String Exp
 data ApplicationM = ApplicationM String String Exp
   deriving (Eq, Show)
 data LetM = LetM String String Exp
+  deriving (Eq, Show)
+data TrplM = TrplM String String String String String String String String String Exp
   deriving (Eq, Show)
 
 data Value

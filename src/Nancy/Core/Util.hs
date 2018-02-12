@@ -11,211 +11,131 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.State
 
-data ValidityVarSubParams =
-  ValidityVarSubParams {
-      u :: String
-    , trailEnv :: Env L.Trail
-    , p :: L.Witness
-  }
-
 allEqual :: Eq a => [a] -> Bool
 allEqual [] = True
 allEqual (x:xs) = all (== x) xs
 
-unzipTrailRenames :: [L.TrailRename] -> ([String], [String])
-unzipTrailRenames = unzip . fmap toPair
-  where toPair L.TrailRename { L.old=old, L.new=new } = (old, new)
+witSubOnType :: String -> L.Witness -> L.Type -> L.Type
+witSubOnType _ _ same@L.IntType = same
+witSubOnType _ _ same@L.BoolType = same
+witSubOnType u w (L.ArrowType argType bodyType) =
+  L.ArrowType (witSubOnType u w argType) (witSubOnType u w bodyType)
+witSubOnType u w (L.BoxType boxWit boxType) =
+  L.BoxType (witSubOnWit u w boxWit) (witSubOnType u w boxType)
 
-renameTrailVars :: [L.TrailRename] -> L.Trail -> L.Trail
-renameTrailVars params (L.Reflexivity p) =
-  L.Reflexivity (renameWitnessTrailVars params p)
-renameTrailVars params (L.Symmetry e) =
-  L.Symmetry (renameTrailVars params e)
-renameTrailVars params (L.Transitivity e1 e2) =
-  L.Transitivity
-    (renameTrailVars params e1)
-    (renameTrailVars params e2)
-renameTrailVars params (L.Beta t p1 p2) =
-  L.Beta
-    (renameTypeTrailVars params t)
-    (renameWitnessTrailVars params p1)
-    (renameWitnessTrailVars params p2)
-renameTrailVars params (L.BetaBox u t p1 p2) =
-  L.BetaBox
-    u
-    (renameTypeTrailVars params t)
-    (renameWitnessTrailVars params p1)
-    (renameWitnessTrailVars params p2)
-renameTrailVars params (L.AbsCompat t e) =
-  L.AbsCompat
-    (renameTypeTrailVars params t)
-    (renameTrailVars params e)
-renameTrailVars params (L.AppCompat e1 e2) =
-  L.AppCompat
-    (renameTrailVars params e1)
-    (renameTrailVars params e2)
-renameTrailVars params (L.LetCompat u t e1 e2) =
-  L.LetCompat
-    u
-    (renameTypeTrailVars params t)
-    (renameTrailVars params e1)
-    (renameTrailVars params e2)
-renameTrailVars params (L.TrailInspectionT s w1 w2 w3 w4 w5 w6 w7 w8 w9) =
-  L.TrailInspectionT s w1 w2 w3 w4 w5 w6 w7 w8 w9
-
-renameEnvTrailVars :: [L.TrailRename] -> Env L.Trail -> Env L.Trail
-renameEnvTrailVars params =
-   Map.map (renameTrailVars params)
-
-renameTrailVar :: [L.TrailRename] -> String -> String
-renameTrailVar trailRenames oldTrailVar =
-  let matchedRename = find (\L.TrailRename { L.old=old } -> old == oldTrailVar) trailRenames
-  in
-    case matchedRename of
-      Just L.TrailRename { L.new=new } -> new
-      Nothing -> oldTrailVar
-
-renameWitnessTrailVars :: [L.TrailRename] -> L.Witness -> L.Witness
-renameWitnessTrailVars params (L.TruthHypothesisW s) =
-  L.TruthHypothesisW s
-renameWitnessTrailVars _ (L.ConstantIntW n) = L.ConstantIntW n
-renameWitnessTrailVars _ (L.ConstantBoolW b) = L.ConstantBoolW b
-renameWitnessTrailVars params (L.AbstractionW t p) =
-  L.AbstractionW (renameTypeTrailVars params t) (renameWitnessTrailVars params p)
-renameWitnessTrailVars params (L.ApplicationW p1 p2) =
-  L.ApplicationW (renameWitnessTrailVars params p1) (renameWitnessTrailVars params p2)
-renameWitnessTrailVars _ (L.ValidityHypothesisW s1 s2) = L.ValidityHypothesisW s1 s2
-renameWitnessTrailVars params (L.BoxIntroductionW trailEnv p) =
-  L.BoxIntroductionW (renameEnvTrailVars params trailEnv) (renameWitnessTrailVars params p)
-renameWitnessTrailVars params (L.BoxEliminationW u t p1 p2) =
-  L.BoxEliminationW
-    u
-    (renameTypeTrailVars params t)
-    (renameWitnessTrailVars params p1)
-    (renameWitnessTrailVars params p2)
-renameWitnessTrailVars params
-  (L.TrailInspectionW s p1 p2 p3 p4 p5 p6 p7 p8 p9) =
-  let newS = renameTrailVar params s in
-    L.TrailInspectionW
-      newS
-      (renameWitnessTrailVars params p1)
-      (renameWitnessTrailVars params p2)
-      (renameWitnessTrailVars params p3)
-      (renameWitnessTrailVars params p4)
-      (renameWitnessTrailVars params p5)
-      (renameWitnessTrailVars params p6)
-      (renameWitnessTrailVars params p7)
-      (renameWitnessTrailVars params p8)
-      (renameWitnessTrailVars params p9)
-
-renameTypeTrailVars :: [L.TrailRename] -> L.Type -> L.Type
-renameTypeTrailVars _ L.IntT = L.IntT
-renameTypeTrailVars _ L.BoolT = L.BoolT
-renameTypeTrailVars params (L.ArrowT l r) =
-  L.ArrowT (renameTypeTrailVars params l) (renameTypeTrailVars params r)
-renameTypeTrailVars params (L.BoxT s trailEnv p t) =
-  L.BoxT
-    s
-    (renameEnvTrailVars params trailEnv)
-    (renameWitnessTrailVars params p)
-    (renameTypeTrailVars params t)
-renameTypeTrailVars params (L.TrailReplacementT t) =
-  L.TrailReplacementT (renameTypeTrailVars params t)
-
-subsituteTypeValidityVars :: ValidityVarSubParams -> L.Type -> L.Type
-subsituteTypeValidityVars _ L.IntT = L.IntT
-subsituteTypeValidityVars _ L.BoolT = L.BoolT
-subsituteTypeValidityVars params (L.ArrowT l r) =
-  L.ArrowT
-    (subsituteTypeValidityVars params l)
-    (subsituteTypeValidityVars params r)
-subsituteTypeValidityVars params (L.BoxT s boxEnv boxP boxT) =
-  L.BoxT
-    s
-    boxEnv
-    (subsituteWitnessValidityVars params boxP)
-    (subsituteTypeValidityVars params boxT)
-subsituteTypeValidityVars params (L.TrailReplacementT t) =
-  L.TrailReplacementT (subsituteTypeValidityVars params t)
-
-subsituteWitnessValidityVars :: ValidityVarSubParams -> L.Witness -> L.Witness
-subsituteWitnessValditiyVars _ (L.TruthHypothesisW t) =
-  L.TruthHypothesisW t
-subsituteWitnessValidityVars _ (L.ConstantIntW n) =
-  L.ConstantIntW n
-subsituteWitnessValidityVars _ (L.ConstantBoolW b) =
-  L.ConstantBoolW b
-subsituteWitnessValidityVars params (L.AbstractionW t p) =
-  L.AbstractionW
-    t
-    (subsituteWitnessValidityVars params p)
-subsituteWitnessValidityVars params (L.ApplicationW p1 p2) =
-  L.ApplicationW
-    (subsituteWitnessValidityVars params p1)
-    (subsituteWitnessValidityVars params p2)
-subsituteWitnessValidityVars
-  ValidityVarSubParams{u=u, p=p, trailEnv=trailEnv}
-  (L.ValidityHypothesisW s1 trailRenames)
-   | s1 == u =
-    renameWitnessTrailVars trailRenames p
-   | otherwise =
-    L.ValidityHypothesisW s1 trailRenames
-subsituteWitnessValidityVars params (L.BoxIntroductionW trailEnv p) =
-  L.BoxIntroductionW
-   trailEnv
-   (subsituteWitnessValidityVars params p)
-subsituteWitnessValidityVars params (L.BoxEliminationW u t p1 p2) =
-  L.BoxEliminationW
-    u
-    t
-    (subsituteWitnessValidityVars params p1)
-    (subsituteWitnessValidityVars params p2)
-subsituteWitnessValidityVars params
-  (L.TrailInspectionW e p1 p2 p3 p4 p5 p6 p7 p8 p9) =
-  L.TrailInspectionW
-    e
-    (subsituteWitnessValidityVars params p1)
-    (subsituteWitnessValidityVars params p2)
-    (subsituteWitnessValidityVars params p3)
-    (subsituteWitnessValidityVars params p4)
-    (subsituteWitnessValidityVars params p5)
-    (subsituteWitnessValidityVars params p6)
-    (subsituteWitnessValidityVars params p7)
-    (subsituteWitnessValidityVars params p8)
-    (subsituteWitnessValidityVars params p9)
+witSubOnWit :: String -> L.Witness -> L.Witness -> L.Witness
+witSubOnWit _ _ same@(L.VarWit _) = same
+witSubOnWit _ _ same@(L.IntWit _) = same
+witSubOnWit _ _ same@(L.BoolWit _) = same
+witSubOnWit u w (L.LamWit arg argType bodyWit) =
+  L.LamWit arg argType (witSubOnWit u w bodyWit)
+witSubOnWit u w (L.AppWit leftWit rightWit) =
+  L.AppWit (witSubOnWit u w leftWit) (witSubOnWit u w rightWit)
+witSubOnWit u w same@(L.AVarWit var)
+  | u == var = w
+  | u /= var = same
+witSubOnWit u w (L.BangWit bangWit) =
+  L.BangWit (witSubOnWit u w bangWit)
+witSubOnWit u w (L.LetWit var varType argWit bodyWit) =
+  L.LetWit var varType (witSubOnWit u w argWit) (witSubOnWit u w bodyWit)
+witSubOnWit u w (L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+  L.TiWit
+    (witSubOnWit u w rWit)
+    (witSubOnWit u w tWit)
+    (witSubOnWit u w baWit)
+    (witSubOnWit u w bbWit)
+    (witSubOnWit u w tiWit)
+    (witSubOnWit u w lamWit)
+    (witSubOnWit u w appWit)
+    (witSubOnWit u w letWit)
+    (witSubOnWit u w trplWit)
 
 getSource :: L.Trail -> L.Witness
-getSource (L.Reflexivity witness) =
+getSource (L.RTrail witness) =
   witness
-getSource (L.Symmetry trl) =
-  getSource trl
-getSource (L.Transitivity trl1 trl2) =
+getSource (L.TTrail trl1 _) =
   getSource trl1
-getSource (L.Beta typ wit1 wit2) =
-  L.ApplicationW (L.AbstractionW typ wit1) wit2
-getSource (L.BetaBox u typ wit1 wit2) =
-  L.BoxEliminationW u typ wit1 wit2
-getSource (L.AbsCompat typ trl) =
-  L.AbstractionW typ (getSource trl)
-getSource (L.AppCompat trl1 trl2) =
-  L.ApplicationW (getSource trl1) (getSource trl2)
-getSource (L.LetCompat u typ trl1 trl2) =
-  L.BoxEliminationW u typ (getSource trl1) (getSource trl2)
-getSource (L.TrailInspectionT
-    s
+getSource (L.BaTrail arg argType bodyWit argWit) =
+  L.AppWit (L.LamWit arg argType bodyWit) argWit
+getSource (L.BbTrail arg argType argWit bodyWit) =
+  L.LetWit arg argType (L.BangWit argWit) bodyWit
+getSource (L.TiTrail _ rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+  L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit
+getSource (L.LamTrail arg argType bodyTrail) =
+  L.LamWit arg argType (getSource bodyTrail)
+getSource (L.AppTrail lamTrail argTrail) =
+  L.AppWit (getSource lamTrail) (getSource argTrail)
+getSource (L.LetTrail arg argType argTrail bodyTrail) =
+  L.LetWit arg argType (getSource argTrail) (getSource bodyTrail)
+getSource (L.TrplTrail
+    rTrail
+    tTrail
+    baTrail
+    bbTrail
+    tiTrail
+    absTrail
+    appTrail
+    letTrail
+    trplTrail) =
+  L.TiWit
+    (getSource rTrail)
+    (getSource tTrail)
+    (getSource baTrail)
+    (getSource bbTrail)
+    (getSource tiTrail)
+    (getSource absTrail)
+    (getSource appTrail)
+    (getSource letTrail)
+    (getSource trplTrail)
+
+getWit :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE (WriterT [String] (StateT L.Trail Identity))) L.Witness
+getWit (L.Number n) =
+  return $ L.IntWit n
+getWit (L.Boolean b) =
+  return $ L.BoolWit b
+getWit (L.Brack exp) =
+  getWit exp
+getWit (L.Var x) =
+  return $ L.VarWit x
+getWit (L.Lam arg argType body) = do
+  bodyWit <- getWit body
+  return $ L.LamWit arg argType bodyWit
+getWit (L.App lam arg) = do
+  lamWit <- getWit lam
+  argWit <- getWit arg
+  return $ L.AppWit lamWit argWit
+getWit (L.AVar u) =
+  return $ L.AVarWit u
+getWit (L.Bang exp) =
+  undefined
+  -- TODO
+getWit (L.Let u typ arg body) = do
+  argWit <- getWit arg
+  bodyWit <- getWit body
+  return $ L.LetWit u typ argWit bodyWit
+getWit
+  (L.Inspect
+    (L.ReflexivityM exp_r)
+    (L.TransitivityM t1 t2 exp_t)
+    (L.BetaM exp_ba)
+    (L.BetaBoxM exp_bb)
+    (L.TrailInspectionM exp_ti)
+    (L.AbstractionM abs1 exp_abs)
+    (L.ApplicationM app1 app2 exp_app)
+    (L.LetM let1 let2 exp_let)
+    (L.TrplM r t ba bb ti lam app letArg trpl exp_trpl))
+    = do
+  rWit <- getWit exp_r
+  tWit <- getWit exp_t
+  baWit <- getWit exp_ba
+  bbWit <- getWit exp_bb
+  tiWit <- getWit exp_ti
+  absWit <- getWit exp_abs
+  appWit <- getWit exp_app
+  letWit <- getWit exp_let
+  trplWit <- getWit exp_trpl
+  return $ L.TiWit
     rWit
-    sWit
-    tWit
-    baWit
-    bbWit
-    tiWit
-    absWit
-    appWit
-    letWit) =
-  L.TrailInspectionW
-    s
-    rWit
-    sWit
     tWit
     baWit
     bbWit
@@ -223,62 +143,4 @@ getSource (L.TrailInspectionT
     absWit
     appWit
     letWit
-
-computeWitness :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE (WriterT [String] (StateT L.Trail Identity))) L.Witness
-computeWitness (L.Number n) =
-  return $ L.ConstantIntW n
-computeWitness (L.Boolean b) =
-  return $ L.ConstantBoolW b
-computeWitness (L.Brack exp) =
-  computeWitness exp
-computeWitness (L.Id x) =
-  return $ L.TruthHypothesisW x
-computeWitness (L.Abs x t b) = do
-  bodyWitness <- computeWitness b
-  return $ L.AbstractionW t bodyWitness
-computeWitness (L.App x y) = do
-  xWitness <- computeWitness x
-  yWitness <- computeWitness y
-  return $ L.ApplicationW xWitness yWitness
-computeWitness (L.AuditedVar trailRenames u) =
-  return $ L.ValidityHypothesisW u trailRenames
-computeWitness (L.AuditedUnit trailVar exp) = do
-  (_, _, eEnv) <- ask
-  trail <- loadES trailVar (Err.TrailVarUndefined trailVar eEnv) eEnv
-  return $ L.BoxIntroductionW eEnv (getSource trail)
-computeWitness (L.AuditedComp u typ arg body) = do
-  argWitness <- computeWitness arg
-  bodyWitness <- computeWitness body
-  return $ L.BoxEliminationW u typ bodyWitness argWitness
-computeWitness
-  (L.TrailInspect trailVar
-    (L.ReflexivityM exp_r)
-    (L.SymmetryM s1 exp_s)
-    (L.TransitivityM t1 t2 exp_t)
-    (L.BetaM exp_ba)
-    (L.BetaBoxM exp_bb)
-    (L.TrailInspectionM exp_ti)
-    (L.AbstractionM abs1 exp_abs)
-    (L.ApplicationM app1 app2 exp_app)
-    (L.LetM let1 let2 exp_let))
-    = do
-  rWitness <- computeWitness exp_r
-  sWitness <- computeWitness exp_s
-  tWitness <- computeWitness exp_t
-  baWitness <- computeWitness exp_ba
-  bbWitness <- computeWitness exp_bb
-  tiWitness <- computeWitness exp_ti
-  absWitness <- computeWitness exp_abs
-  appWitness <- computeWitness exp_app
-  letWitness <- computeWitness exp_let
-  return $ L.TrailInspectionW
-    trailVar
-    rWitness
-    sWitness
-    tWitness
-    baWitness
-    bbWitness
-    tiWitness
-    absWitness
-    appWitness
-    letWitness
+    trplWit
