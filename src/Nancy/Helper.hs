@@ -2,7 +2,7 @@ module Nancy.Helper where
 
 import Nancy.Parser( parseProgram )
 import Nancy.Typechecker
-import Nancy.Interpreter
+--import Nancy.Interpreter
 import Nancy.Core.Env as Env
 import Nancy.Core.Language
 import Nancy.Core.Errors
@@ -16,20 +16,20 @@ parse source input =
 
 parseAndTypecheck :: FilePath -> String -> Either NancyError TypePair
 parseAndTypecheck source input =
-  parseAndTypecheckWithEnv source input (Env.empty, Env.empty, Env.empty)
+  parseAndTypecheckWithEnv source input (Env.empty, Env.empty)
 
 parseAndTypecheckWithEnv :: FilePath -> String -> TypecheckEnv -> Either NancyError TypePair
 parseAndTypecheckWithEnv source input env = do
   parseResult <- parse source input
   typecheckProgram env parseResult
 
-parseAndInterpret :: FilePath -> String -> (Either NancyError ValuePair, [String])
-parseAndInterpret source input =
-  parseAndInterpretWithEnv source input (Env.empty, Env.empty, Env.empty)
-
-parseAndInterpretWithEnv :: FilePath -> String -> InterpretEnv -> (Either NancyError ValuePair, [String])
-parseAndInterpretWithEnv source input env =
-  case parse source input of
-    Right parseResult ->
-      interpretProgram env parseResult
-    Left err -> (Left err, [])
+--parseAndInterpret :: FilePath -> String -> (Either NancyError ValuePair, [String])
+--parseAndInterpret source input =
+--  parseAndInterpretWithEnv source input (Env.empty, Env.empty, Env.empty)
+--
+--parseAndInterpretWithEnv :: FilePath -> String -> InterpretEnv -> (Either NancyError ValuePair, [String])
+--parseAndInterpretWithEnv source input env =
+--  case parse source input of
+--    Right parseResult ->
+--      interpretProgram env parseResult
+--    Left err -> (Left err, [])

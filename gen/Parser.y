@@ -65,7 +65,7 @@ Exp       : id                               { Var $1 }
           | '<' id '>'                       { AVar $2 }
           | '!' Exp                          { Bang $2 (RTrail (getWit $2)) }
           | let id ':' Type be Exp in Exp    { Let $2 $4 $6 $8 }
-          | insp '}'
+          | insp '{'
               'r' '->' Exp
               't' '->' Exp
               ba '->' Exp
