@@ -23,6 +23,7 @@ tokens :-
   $white+                         ;
   "//".*                          ;
   fun                             { lex' TokenFun }
+  inspect                         { lex' TokenInspect }
   "->"                            { lex' TokenArrow }
   "<"                             { lex' TokenLBrack }
   ">"                             { lex' TokenRBrack }
@@ -41,7 +42,7 @@ tokens :-
   ba                              { lex' TokenBA }
   bb                              { lex' TokenBB }
   ti                              { lex' TokenTI }
-  abs                             { lex' TokenABS }
+  lam                             { lex' TokenLAM }
   app                             { lex' TokenAPP }
   trpl                            { lex' TokenTRPL }
   let                             { lex' TokenLet }
@@ -74,6 +75,7 @@ data Token = Token AlexPosn TokenClass
 
 data TokenClass
   = TokenFun
+  | TokenInspect
   | TokenArrow
   | TokenLBrack
   | TokenRBrack
@@ -92,7 +94,7 @@ data TokenClass
   | TokenBA
   | TokenBB
   | TokenTI
-  | TokenABS
+  | TokenLAM
   | TokenAPP
   | TokenTRPL
   | TokenLet

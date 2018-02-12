@@ -20,6 +20,7 @@ import Nancy.Core.Errors
   id    { Token _ (TokenVar $$) }
   num   { Token _ (TokenNum $$) }
   fun   { Token _ TokenFun }
+  insp  { Token _ TokenInspect }
   '->'  { Token _ TokenArrow }
   '<'   { Token _ TokenLBrack }
   '>'   { Token _ TokenRBrack }
@@ -38,7 +39,7 @@ import Nancy.Core.Errors
   ba    { Token _ TokenBA }
   bb    { Token _ TokenBB }
   ti    { Token _ TokenTI }
-  abs   { Token _ TokenABS }
+  lam   { Token _ TokenLAM }
   app   { Token _ TokenAPP }
   trpl  { Token _ TokenTRPL }
   let   { Token _ TokenLet }
@@ -56,14 +57,6 @@ Program   : Exp                              { Program $1 }
 Type      : int                              { IntT }
           | bool                             { BoolT }
           | Type '->' Type                   { ArrowT $1 $3 }
-R         : 'r' '->' Exp                     { ReflexivityM $3 }
-T         : 't' '(' id id ')' '->' Exp       { TransitivityM $3 $4 $7}
-BA        : ba '->' Exp                      { BetaM $3 }
-BB        : bb '->' Exp                      { BetaBoxM $3 }
-TI        : ti '->' Exp                      { TrailInspectionM $3 }
-ABS       : abs '(' id ')' '->' Exp          { AbstractionM $3 $6 }
-APP       : app '(' id id ')' '->' Exp       { ApplicationM $3 $4 $7 }
-LET       : let '(' id id ')' '->' Exp       { LetM $3 $4 $7 }
 Exp       : id                               { Id $1 }
           | num                              { Number $1 }
           | true                             { Boolean True }
@@ -74,7 +67,17 @@ Exp       : id                               { Id $1 }
           | '<' id '>'                       { AuditedVar $2 }
           | '!' Exp                          { AuditedUnit $2 }
           | let id ':' Type be Exp in Exp    { AuditedComp $2 $4 $6 $8 }
-          | id '[' R ';' T ';' BA ';' BB ';' TI ';' ABS ';' APP ';' LET ']' { TrailInspect $1 $3 $5 $7 $9 $11 $13 $15 $17 }
+          | insp '['
+              'r' '->' Exp
+              't' '->' Exp
+              ba '->' Exp
+              bb '->' Exp
+              ti '->' Exp
+              lam '->' Exp
+              app '->' Exp
+              let '->' Exp
+              trpl '->' Exp
+            ']' { TrailInspect $5 $8 $11 $14 $17 $20 $23 $26 $29 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a
