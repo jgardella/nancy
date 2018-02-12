@@ -6,6 +6,7 @@ import Data.Char
 import Nancy.Lexer
 import Nancy.Core.Language
 import Nancy.Core.Errors
+import Nancy.Core.Util
 }
 
 %name parse
@@ -62,7 +63,7 @@ Exp       : id                               { Var $1 }
           | fun '(' id ':' Type ')' '->' Exp { Lam $3 $5 $8 }
           | Exp Exp                          { App $1 $2 }
           | '<' id '>'                       { AVar $2 }
-          | '!' Exp                          { Bang $2 }
+          | '!' Exp                          { Bang $2 (RTrail (getWit $2)) }
           | let id ':' Type be Exp in Exp    { Let $2 $4 $6 $8 }
           | insp '}'
               'r' '->' Exp

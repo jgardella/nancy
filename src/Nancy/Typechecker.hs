@@ -66,7 +66,7 @@ typecheckExpression (AVar u) = do
   (_, wEnv) <- ask
   varType <- E.loadE u (Err.ValidityVarUndefined u) wEnv
   return (varType, L.AVarWit u)
-typecheckExpression (Bang body) = do
+typecheckExpression (Bang body _) = do
   (bodyType, bodyWit) <- local (updateTruthEnv $ const E.empty) (typecheckExpression body)
   return (L.BoxType bodyWit bodyType, L.BangWit bodyWit)
 typecheckExpression (Let u uType arg body) = do

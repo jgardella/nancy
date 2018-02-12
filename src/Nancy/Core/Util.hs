@@ -88,31 +88,25 @@ getSource (L.TrplTrail
     (getSource letTrail)
     (getSource trplTrail)
 
-getWit :: L.Exp -> ReaderT L.InterpretEnv (ExceptT InterpreterE (WriterT [String] (StateT L.Trail Identity))) L.Witness
+getWit :: L.Exp -> L.Witness
 getWit (L.Number n) =
-  return $ L.IntWit n
+  L.IntWit n
 getWit (L.Boolean b) =
-  return $ L.BoolWit b
+  L.BoolWit b
 getWit (L.Brack exp) =
   getWit exp
 getWit (L.Var x) =
-  return $ L.VarWit x
-getWit (L.Lam arg argType body) = do
-  bodyWit <- getWit body
-  return $ L.LamWit arg argType bodyWit
-getWit (L.App lam arg) = do
-  lamWit <- getWit lam
-  argWit <- getWit arg
-  return $ L.AppWit lamWit argWit
+  L.VarWit x
+getWit (L.Lam arg argType body) =
+  L.LamWit arg argType (getWit body)
+getWit (L.App lam arg) =
+  L.AppWit (getWit lam) (getWit arg)
 getWit (L.AVar u) =
-  return $ L.AVarWit u
-getWit (L.Bang exp) =
-  undefined
-  -- TODO
-getWit (L.Let u typ arg body) = do
-  argWit <- getWit arg
-  bodyWit <- getWit body
-  return $ L.LetWit u typ argWit bodyWit
+  L.AVarWit u
+getWit (L.Bang exp trail) =
+  getSource trail
+getWit (L.Let u typ arg body) =
+  L.LetWit u typ (getWit arg) (getWit body)
 getWit
   (L.Inspect
     rExp
@@ -124,23 +118,14 @@ getWit
     appExp
     letExp
     trplExp)
-    = do
-  rWit <- getWit rExp
-  tWit <- getWit tExp
-  baWit <- getWit baExp
-  bbWit <- getWit bbExp
-  tiWit <- getWit tiExp
-  absWit <- getWit lamExp
-  appWit <- getWit appExp
-  letWit <- getWit letExp
-  trplWit <- getWit trplExp
-  return $ L.TiWit
-    rWit
-    tWit
-    baWit
-    bbWit
-    tiWit
-    absWit
-    appWit
-    letWit
-    trplWit
+    =
+  L.TiWit
+    (getWit rExp)
+    (getWit tExp)
+    (getWit baExp)
+    (getWit bbExp)
+    (getWit tiExp)
+    (getWit lamExp)
+    (getWit appExp)
+    (getWit letExp)
+    (getWit trplExp)

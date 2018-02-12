@@ -128,7 +128,7 @@ data Exp
   | Lam String Type Exp
   | App Exp Exp
   | AVar String
-  | Bang Exp
+  | Bang Exp Trail
   | Let String Type Exp Exp
   | Inspect Exp Exp Exp Exp Exp Exp Exp Exp Exp
   deriving (Eq, Show)
