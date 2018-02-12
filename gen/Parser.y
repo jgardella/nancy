@@ -34,7 +34,6 @@ import Nancy.Core.Errors
   '!'   { Token _ TokenBang }
   '.'   { Token _ TokenDot }
   'r'   { Token _ TokenR }
-  's'   { Token _ TokenS }
   't'   { Token _ TokenT }
   ba    { Token _ TokenBA }
   bb    { Token _ TokenBB }
@@ -58,7 +57,6 @@ Type      : int                              { IntT }
           | bool                             { BoolT }
           | Type '->' Type                   { ArrowT $1 $3 }
 R         : 'r' '->' Exp                     { ReflexivityM $3 }
-S         : 's' '(' id ')' '->' Exp          { SymmetryM $3 $6 }
 T         : 't' '(' id id ')' '->' Exp       { TransitivityM $3 $4 $7}
 BA        : ba '->' Exp                      { BetaM $3 }
 BB        : bb '->' Exp                      { BetaBoxM $3 }
@@ -76,7 +74,7 @@ Exp       : id                               { Id $1 }
           | '<' id '>'                       { AuditedVar $2 }
           | '!' Exp                          { AuditedUnit $2 }
           | let id ':' Type be Exp in Exp    { AuditedComp $2 $4 $6 $8 }
-          | id '[' R ';' S ';' T ';' BA ';' BB ';' TI ';' ABS ';' APP ';' LET ']' { TrailInspect $1 $3 $5 $7 $9 $11 $13 $15 $17 $19 }
+          | id '[' R ';' T ';' BA ';' BB ';' TI ';' ABS ';' APP ';' LET ']' { TrailInspect $1 $3 $5 $7 $9 $11 $13 $15 $17 }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a

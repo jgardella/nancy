@@ -37,7 +37,6 @@ tokens :-
   "!"                             { lex' TokenBang }
   "."                             { lex' TokenDot }
   "r"                             { lex' TokenR }
-  "s"                             { lex' TokenS }
   "t"                             { lex' TokenT }
   ba                              { lex' TokenBA }
   bb                              { lex' TokenBB }
@@ -89,7 +88,6 @@ data TokenClass
   | TokenColon
   | TokenSemi
   | TokenR
-  | TokenS
   | TokenT
   | TokenBA
   | TokenBB

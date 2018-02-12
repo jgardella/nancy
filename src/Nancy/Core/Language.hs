@@ -5,17 +5,17 @@ import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
 data Type
-  = IntT
-  | BoolT
-  | ArrowT Type Type
-  | BoxT Witness Type
+  = IntType
+  | BoolType
+  | ArrowType Type Type
+  | BoxType Witness Type
   deriving (Eq, Show)
 
 instance Pretty Type where
-  pPrint IntT = text "int"
-  pPrint BoolT = text "bool"
-  pPrint (ArrowT l r) = pPrint l <+> text "->" <+> pPrint r
-  pPrint (BoxT p t) = text "[" <> pPrint p <> text "]" <+> pPrint t
+  pPrint IntType = text "int"
+  pPrint BoolType = text "bool"
+  pPrint (ArrowType l r) = pPrint l <+> text "->" <+> pPrint r
+  pPrint (BoxType p t) = text "[" <> pPrint p <> text "]" <+> pPrint t
 
 data Witness
   = VarWit String
@@ -109,21 +109,19 @@ newtype Program = Program Exp
   deriving Show
 
 data Exp
-  = Id String
+  = Var String
   | Number Int
   | Boolean Bool
   | Brack Exp
   | Abs String Type Exp
   | App Exp Exp
-  | AuditedVar String
-  | AuditedUnit Exp
-  | AuditedComp String Type Exp Exp
-  | TrailInspect ReflexivityM SymmetryM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM
+  | AVar String
+  | Bang Exp
+  | Let String Type Exp Exp
+  | TrailInspect ReflexivityM TransitivityM BetaM BetaBoxM TrailInspectionM AbstractionM ApplicationM LetM
   deriving (Eq, Show)
 
 newtype ReflexivityM = ReflexivityM Exp
-  deriving (Eq, Show)
-data SymmetryM = SymmetryM String Exp
   deriving (Eq, Show)
 data TransitivityM = TransitivityM String String Exp
   deriving (Eq, Show)
@@ -141,19 +139,19 @@ data LetM = LetM String String Exp
   deriving (Eq, Show)
 
 data Value
-  = IntV Int
-  | BoolV Bool
-  | ArrowV InterpretEnv String Type Exp
-  | BoxV String (Env Trail) Witness Value
+  = IntVal Int
+  | BoolVal Bool
+  | ArrowVal InterpretEnv String Type Exp
+  | BoxVal Witness Value
   deriving (Eq, Show)
 
 instance Pretty Value where
-  pPrint (IntV i) = int i
-  pPrint (BoolV b) = text $ show b
-  pPrint (ArrowV _ arg typ body) = text "(" <> text arg <> text ":" <> pPrint typ <+> text "->" <+> text (show body) <+> text ")"
-  pPrint (BoxV _ trailEnv witness value) =
-    text "[" <> pPrint trailEnv <+> text "." <+> pPrint witness <> text "]" <+> pPrint value
+  pPrint (IntVal i) = int i
+  pPrint (BoolVal b) = text $ show b
+  pPrint (ArrowVal _ arg typ body) = text "(" <> text arg <> text ":" <> pPrint typ <+> text "->" <+> text (show body) <+> text ")"
+  pPrint (BoxVal witness value) =
+    text "[" <+> pPrint witness <> text "]" <+> pPrint value
 
 type ValuePair = (Value, Trail)
 
-type InterpretEnv = (Env Value, Env Value, Env Trail)
+type InterpretEnv = (Env Value, Env Value)
