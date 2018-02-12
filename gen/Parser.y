@@ -21,19 +21,18 @@ import Nancy.Core.Errors
   num   { Token _ (TokenNum $$) }
   fun   { Token _ TokenFun }
   '->'  { Token _ TokenArrow }
+  '<'   { Token _ TokenLBrack }
+  '>'   { Token _ TokenRBrack }
   '('   { Token _ TokenLParen }
   ')'   { Token _ TokenRParen }
   '['   { Token _ TokenLSquare }
   ']'   { Token _ TokenRSquare }
   '{'   { Token _ TokenLBrace }
   '}'   { Token _ TokenRBrace }
-  '<'   { Token _ TokenLBrack }
-  '>'   { Token _ TokenRBrack }
-  ';'   { Token _ TokenSemi }
   ':'   { Token _ TokenColon }
+  ';'   { Token _ TokenSemi }
   '!'   { Token _ TokenBang }
   '.'   { Token _ TokenDot }
-  '|'   { Token _ TokenBar }
   'r'   { Token _ TokenR }
   's'   { Token _ TokenS }
   't'   { Token _ TokenT }
@@ -46,7 +45,6 @@ import Nancy.Core.Errors
   let   { Token _ TokenLet }
   be    { Token _ TokenBe }
   in    { Token _ TokenIn }
-  trl   { Token _ TokenTrail }
   int   { Token _ TokenInt }
   bool  { Token _ TokenBool }
   true  { Token _ TokenTrue }
@@ -68,9 +66,6 @@ TI        : ti '->' Exp                      { TrailInspectionM $3 }
 ABS       : abs '(' id ')' '->' Exp          { AbstractionM $3 $6 }
 APP       : app '(' id id ')' '->' Exp       { ApplicationM $3 $4 $7 }
 LET       : let '(' id id ')' '->' Exp       { LetM $3 $4 $7 }
-Rename    : id '->' id                       { TrailRename $1 $3 }
-Renames   : Rename                           { [$1] }
-          | Renames ';' Rename               { $3 : $1 }
 Exp       : id                               { Id $1 }
           | num                              { Number $1 }
           | true                             { Boolean True }
@@ -78,8 +73,8 @@ Exp       : id                               { Id $1 }
           | '(' Exp ')'                      { Brack $2 }
           | fun '(' id ':' Type ')' '->' Exp { Abs $3 $5 $8 }
           | Exp Exp                          { App $1 $2 }
-          | '<' Renames '|' id '>'           { AuditedVar $2 $4 }
-          | '!' id Exp                       { AuditedUnit $2 $3 }
+          | '<' id '>'                       { AuditedVar $2 }
+          | '!' Exp                          { AuditedUnit $2 }
           | let id ':' Type be Exp in Exp    { AuditedComp $2 $4 $6 $8 }
           | id '[' R ';' S ';' T ';' BA ';' BB ';' TI ';' ABS ';' APP ';' LET ']' { TrailInspect $1 $3 $5 $7 $9 $11 $13 $15 $17 $19 }
 

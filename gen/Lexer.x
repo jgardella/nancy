@@ -24,19 +24,18 @@ tokens :-
   "//".*                          ;
   fun                             { lex' TokenFun }
   "->"                            { lex' TokenArrow }
+  "<"                             { lex' TokenLBrack }
+  ">"                             { lex' TokenRBrack }
   "{"                             { lex' TokenLBrace }
   "}"                             { lex' TokenRBrace }
   "("                             { lex' TokenLParen }
   ")"                             { lex' TokenRParen }
   "["                             { lex' TokenLSquare }
   "]"                             { lex' TokenRSquare }
-  "<"                             { lex' TokenLBrack }
-  ">"                             { lex' TokenRBrack }
-  ";"                             { lex' TokenSemi }
   ":"                             { lex' TokenColon }
+  ";"                             { lex' TokenSemi }
   "!"                             { lex' TokenBang }
   "."                             { lex' TokenDot }
-  "|"                             { lex' TokenBar }
   "r"                             { lex' TokenR }
   "s"                             { lex' TokenS }
   "t"                             { lex' TokenT }
@@ -49,7 +48,6 @@ tokens :-
   let                             { lex' TokenLet }
   be                              { lex' TokenBe }
   in                              { lex' TokenIn }
-  trl                             { lex' TokenTrail }
   int                             { lex' TokenInt }
   bool                            { lex' TokenBool }
   true                            { lex' TokenTrue }
@@ -78,19 +76,18 @@ data Token = Token AlexPosn TokenClass
 data TokenClass
   = TokenFun
   | TokenArrow
+  | TokenLBrack
+  | TokenRBrack
   | TokenLBrace
   | TokenRBrace
   | TokenLParen
   | TokenRParen
   | TokenLSquare
   | TokenRSquare
-  | TokenLBrack
-  | TokenRBrack
-  | TokenSemi
-  | TokenColon
   | TokenDot
-  | TokenBar
   | TokenBang
+  | TokenColon
+  | TokenSemi
   | TokenR
   | TokenS
   | TokenT
@@ -105,7 +102,6 @@ data TokenClass
   | TokenIn
   | TokenTrue
   | TokenFalse
-  | TokenTrail
   | TokenInt
   | TokenBool
   | TokenVar String
