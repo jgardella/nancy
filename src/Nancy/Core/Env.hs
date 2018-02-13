@@ -31,7 +31,7 @@ loadE s e env =
     (Just v) -> return v
     Nothing -> throwError e
 
-loadES :: String -> e -> Env v -> ReaderT y (ExceptT e (WriterT [String] (StateT s Identity))) v
+loadES :: String -> e -> Env v -> ReaderT y (ExceptT e (WriterT [String] Identity)) v
 loadES s e env =
   case Map.lookup s env of
     (Just v) -> return v

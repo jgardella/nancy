@@ -5,13 +5,15 @@ import Nancy.Typechecker
 --import Nancy.Interpreter
 import Nancy.Core.Env as Env
 import Nancy.Core.Language
+import Nancy.Core.Util
 import Nancy.Core.Errors
 import Nancy.Core.Errors.Typechecker
 
 parse :: FilePath -> String -> Either NancyError Program
 parse source input =
   case parseProgram source input of
-    (Right x) -> Right x
+    (Right (Program (Bang body trail))) -> Right (Program (Bang body trail))
+    (Right (Program nonBangExp)) -> Right (Program (Bang nonBangExp (RTrail (getWit nonBangExp))))
     (Left e) -> Left $ ParserErr e
 
 parseAndTypecheck :: FilePath -> String -> Either NancyError TypePair

@@ -18,10 +18,10 @@ allEqual (x:xs) = all (== x) xs
 witSubOnType :: String -> L.Witness -> L.Type -> L.Type
 witSubOnType _ _ same@L.IntType = same
 witSubOnType _ _ same@L.BoolType = same
-witSubOnType u w (L.ArrowType argType bodyType) =
-  L.ArrowType (witSubOnType u w argType) (witSubOnType u w bodyType)
-witSubOnType u w (L.BoxType boxWit boxType) =
-  L.BoxType (witSubOnWit u w boxWit) (witSubOnType u w boxType)
+witSubOnType u w (L.LamType argType bodyType) =
+  L.LamType (witSubOnType u w argType) (witSubOnType u w bodyType)
+witSubOnType u w (L.BangType bangType bangWit) =
+  L.BangType (witSubOnType u w bangType) (witSubOnWit u w bangWit)
 
 witSubOnWit :: String -> L.Witness -> L.Witness -> L.Witness
 witSubOnWit _ _ same@(L.VarWit _) = same
@@ -97,12 +97,12 @@ getWit (L.Brack exp) =
   getWit exp
 getWit (L.Var x) =
   L.VarWit x
+getWit (L.AVar u) =
+  L.AVarWit u
 getWit (L.Lam arg argType body) =
   L.LamWit arg argType (getWit body)
 getWit (L.App lam arg) =
   L.AppWit (getWit lam) (getWit arg)
-getWit (L.AVar u) =
-  L.AVarWit u
 getWit (L.Bang exp trail) =
   getSource trail
 getWit (L.Let u typ arg body) =

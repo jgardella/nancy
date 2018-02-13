@@ -51,33 +51,33 @@ typecheckExpression (L.Var x) = do
   return (varType, L.VarWit x)
 typecheckExpression (L.Lam arg argType body) = do
   (returnType, returnWit) <- local (updateTruthEnv $ E.save arg argType) (typecheckExpression body)
-  return (L.ArrowType argType returnType, L.LamWit arg argType returnWit)
+  return (L.LamType argType returnType, L.LamWit arg argType returnWit)
 typecheckExpression (App left right) = do
   (leftType, leftWit) <- typecheckExpression left
   case leftType of
-    (L.ArrowType argType returnType) -> do
+    (L.LamType argType returnType) -> do
       (rightType, rightWit) <- typecheckExpression right
       if rightType == argType
       then return (returnType, L.AppWit leftWit rightWit)
       else throwError (Err.InvalidArgType rightType argType)
     t ->
-      throwError (Err.ExpectedArrow left leftType)
+      throwError (Err.ExpectedLam left leftType)
 typecheckExpression (AVar u) = do
   (_, wEnv) <- ask
   varType <- E.loadE u (Err.ValidityVarUndefined u) wEnv
   return (varType, L.AVarWit u)
 typecheckExpression (Bang body _) = do
   (bodyType, bodyWit) <- local (updateTruthEnv $ const E.empty) (typecheckExpression body)
-  return (L.BoxType bodyWit bodyType, L.BangWit bodyWit)
+  return (L.BangType bodyType bodyWit, L.BangWit bodyWit)
 typecheckExpression (Let u uType arg body) = do
   (argType, argWit) <- typecheckExpression arg
   case argType of
-    (L.BoxType boxWit boxType) | boxType == uType -> do
-      (bodyType, bodyWit) <- local (updateWitnessEnv $ E.save u boxType) (typecheckExpression body)
-      return (witSubOnType u boxWit bodyType, L.LetWit u uType bodyWit argWit)
-    (L.BoxType _ boxType) | boxType /= uType ->
-      throwError (Err.InvalidLetArgType uType boxType)
-    t -> throwError (Err.ExpectedBox argType)
+    (L.BangType bangType bangWit) | bangType == uType -> do
+      (bodyType, bodyWit) <- local (updateWitnessEnv $ E.save u bangType) (typecheckExpression body)
+      return (witSubOnType u bangWit bodyType, L.LetWit u uType bodyWit argWit)
+    (L.BangType bangType _) | bangType /= uType ->
+      throwError (Err.InvalidLetArgType uType bangType)
+    t -> throwError (Err.ExpectedBang argType)
 typecheckExpression
   (Inspect
     rExp
@@ -100,15 +100,15 @@ typecheckExpression
   (letType, letWit) <- local keepWitEnv (typecheckExpression letExp)
   (trplType, trplWit) <- local keepWitEnv (typecheckExpression trplExp)
   if allEqual [rType, baType, bbType, tiType]
-    && lamType == createArrowType rType 1
-    && tType == createArrowType rType 2
-    && appType == createArrowType rType 2
-    && letType == createArrowType rType 2
-    && trplType == createArrowType rType 9
+    && lamType == createLamType rType 1
+    && tType == createLamType rType 2
+    && appType == createLamType rType 2
+    && letType == createLamType rType 2
+    && trplType == createLamType rType 9
   then return (rType, L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)
   else throwError Err.InconsistentTrailMappings
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)
-    createArrowType t n
-      | n <= 1 = L.ArrowType t t
-      | otherwise = L.ArrowType t (createArrowType t (n - 1))
+    createLamType t n
+      | n <= 1 = L.LamType t t
+      | otherwise = L.LamType t (createLamType t (n - 1))

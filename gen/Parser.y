@@ -54,7 +54,7 @@ import Nancy.Core.Util
 Program   : Exp                              { Program $1 }
 Type      : int                              { IntType }
           | bool                             { BoolType }
-          | Type '->' Type                   { ArrowType $1 $3 }
+          | Type '->' Type                   { LamType $1 $3 }
 Exp       : id                               { Var $1 }
           | num                              { Number $1 }
           | true                             { Boolean True }

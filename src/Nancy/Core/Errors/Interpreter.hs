@@ -8,9 +8,9 @@ import Text.PrettyPrint.HughesPJClass
 data InterpreterE
   = TruthVarUndefined String
   | TrailVarUndefined String (Env Trail)
-  | ExpectedArrow Value
+  | ExpectedLam Value
   | ValidityVarUndefined String
-  | ExpectedBox Value
+  | ExpectedBang Value
   | InvalidTrailRename String
   deriving (Eq, Show)
 
@@ -19,11 +19,11 @@ instance Pretty InterpreterE where
     text "Truth variable" <+> text tVar <+> text "is not defined"
   pPrint (TrailVarUndefined eVar env) =
     text "Trail variable" <+> text eVar <+> text "is not defined in env: " <> pPrint env
-  pPrint (ExpectedArrow value) =
-    text "Expected Arrow value, but got" <+> pPrint value
+  pPrint (ExpectedLam value) =
+    text "Expected Lam value, but got" <+> pPrint value
   pPrint (ValidityVarUndefined wVar) =
     text "Validity variable" <+> text wVar <+> text "is not defined"
-  pPrint (ExpectedBox value) =
-    text "Expected Box value"
+  pPrint (ExpectedBang value) =
+    text "Expected Bang value, but got" <+> pPrint value
   pPrint (InvalidTrailRename old) =
     text "Invalid trail rename, no existing trail variable '" <> text old <> text "'"

@@ -7,15 +7,15 @@ import Text.PrettyPrint.HughesPJClass
 data Type
   = IntType
   | BoolType
-  | ArrowType Type Type
-  | BoxType Witness Type
+  | LamType Type Type
+  | BangType Type Witness
   deriving (Eq, Show)
 
 instance Pretty Type where
   pPrint IntType = text "int"
   pPrint BoolType = text "bool"
-  pPrint (ArrowType l r) = pPrint l <+> text "->" <+> pPrint r
-  pPrint (BoxType p t) = text "[" <> pPrint p <> text "]" <+> pPrint t
+  pPrint (LamType l r) = pPrint l <+> text "->" <+> pPrint r
+  pPrint (BangType t w) = text "[" <> pPrint w <> text "]" <+> pPrint t
 
 data Witness
   = VarWit String
@@ -64,6 +64,11 @@ data Trail
     | LetTrail String Type Trail Trail
     | TrplTrail Trail Trail Trail Trail Trail Trail Trail Trail Trail
     deriving (Eq, Show)
+
+(<-->) :: Trail -> Trail -> Trail
+trailOne <--> trailTwo = TTrail trailOne trailTwo
+
+infixl 0 <-->
 
 instance Pretty Trail where
   pPrint EmptyT = text "emptyT"
@@ -136,17 +141,18 @@ data Exp
 data Value
   = IntVal Int
   | BoolVal Bool
-  | ArrowVal InterpretEnv String Type Exp
-  | BoxVal Witness Value
+  | LamVal String Type Exp
+  | VarVal String
+  | AVarVal String
+  | BangVal Value Trail
   deriving (Eq, Show)
 
 instance Pretty Value where
   pPrint (IntVal i) = int i
   pPrint (BoolVal b) = text $ show b
-  pPrint (ArrowVal _ arg typ body) = text "(" <> text arg <> text ":" <> pPrint typ <+> text "->" <+> text (show body) <+> text ")"
-  pPrint (BoxVal witness value) =
-    text "[" <+> pPrint witness <> text "]" <+> pPrint value
+  pPrint (LamVal arg typ body) = text "(" <> text arg <> text ":" <> pPrint typ <+> text "->" <+> text (show body) <+> text ")"
+  pPrint (VarVal x) = text x
+  pPrint (AVarVal u) = text "<" <> text u <> text ">"
+  pPrint (BangVal value trail) = text "![" <> pPrint trail <> text "]" <+> pPrint value
 
 type ValuePair = (Value, Trail)
-
-type InterpretEnv = (Env Value, Env Value)
