@@ -15,40 +15,66 @@ allEqual :: Eq a => [a] -> Bool
 allEqual [] = True
 allEqual (x:xs) = all (== x) xs
 
-witSubOnType :: String -> L.Witness -> L.Type -> L.Type
-witSubOnType _ _ same@L.IntType = same
-witSubOnType _ _ same@L.BoolType = same
-witSubOnType u w (L.LamType argType bodyType) =
-  L.LamType (witSubOnType u w argType) (witSubOnType u w bodyType)
-witSubOnType u w (L.BangType bangType bangWit) =
-  L.BangType (witSubOnType u w bangType) (witSubOnWit u w bangWit)
+varSubOnWit :: String -> L.Witness -> L.Witness -> L.Witness
+varSubOnWit a w same@(L.VarWit var)
+  | a == var = w
+  | a /= var = same
+varSubOnWit _ _ same@(L.AVarWit _) = same
+varSubOnWit _ _ same@(L.IntWit _) = same
+varSubOnWit _ _ same@(L.BoolWit _) = same
+varSubOnWit a w (L.LamWit arg argType bodyWit) =
+  L.LamWit arg argType (varSubOnWit a w bodyWit)
+varSubOnWit a w (L.AppWit lamWit argWit) =
+  L.AppWit (varSubOnWit a w lamWit) (varSubOnWit a w argWit)
+varSubOnWit _ _ same@(L.BangWit _) = same
+varSubOnWit a w (L.LetWit var varType argWit bodyWit) =
+  L.LetWit var varType (varSubOnWit a w argWit) (varSubOnWit a w bodyWit)
+varSubOnWit a w (L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+  L.TiWit
+    (varSubOnWit a w rWit)
+    (varSubOnWit a w tWit)
+    (varSubOnWit a w baWit)
+    (varSubOnWit a w bbWit)
+    (varSubOnWit a w tiWit)
+    (varSubOnWit a w lamWit)
+    (varSubOnWit a w appWit)
+    (varSubOnWit a w letWit)
+    (varSubOnWit a w trplWit)
 
-witSubOnWit :: String -> L.Witness -> L.Witness -> L.Witness
-witSubOnWit _ _ same@(L.VarWit _) = same
-witSubOnWit _ _ same@(L.IntWit _) = same
-witSubOnWit _ _ same@(L.BoolWit _) = same
-witSubOnWit u w (L.LamWit arg argType bodyWit) =
-  L.LamWit arg argType (witSubOnWit u w bodyWit)
-witSubOnWit u w (L.AppWit leftWit rightWit) =
-  L.AppWit (witSubOnWit u w leftWit) (witSubOnWit u w rightWit)
-witSubOnWit u w same@(L.AVarWit var)
+avarSubOnType :: String -> L.Witness -> L.Type -> L.Type
+avarSubOnType _ _ same@L.IntType = same
+avarSubOnType _ _ same@L.BoolType = same
+avarSubOnType u w (L.LamType argType bodyType) =
+  L.LamType (avarSubOnType u w argType) (avarSubOnType u w bodyType)
+avarSubOnType u w (L.BangType bangType bangWit) =
+  L.BangType (avarSubOnType u w bangType) (avarSubOnWit u w bangWit)
+
+avarSubOnWit :: String -> L.Witness -> L.Witness -> L.Witness
+avarSubOnWit _ _ same@(L.VarWit _) = same
+avarSubOnWit u w same@(L.AVarWit var)
   | u == var = w
   | u /= var = same
-witSubOnWit u w (L.BangWit bangWit) =
-  L.BangWit (witSubOnWit u w bangWit)
-witSubOnWit u w (L.LetWit var varType argWit bodyWit) =
-  L.LetWit var varType (witSubOnWit u w argWit) (witSubOnWit u w bodyWit)
-witSubOnWit u w (L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+avarSubOnWit _ _ same@(L.IntWit _) = same
+avarSubOnWit _ _ same@(L.BoolWit _) = same
+avarSubOnWit u w (L.LamWit arg argType bodyWit) =
+  L.LamWit arg argType (avarSubOnWit u w bodyWit)
+avarSubOnWit u w (L.AppWit leftWit rightWit) =
+  L.AppWit (avarSubOnWit u w leftWit) (avarSubOnWit u w rightWit)
+avarSubOnWit u w (L.BangWit bangWit) =
+  L.BangWit (avarSubOnWit u w bangWit)
+avarSubOnWit u w (L.LetWit var varType argWit bodyWit) =
+  L.LetWit var varType (avarSubOnWit u w argWit) (avarSubOnWit u w bodyWit)
+avarSubOnWit u w (L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
   L.TiWit
-    (witSubOnWit u w rWit)
-    (witSubOnWit u w tWit)
-    (witSubOnWit u w baWit)
-    (witSubOnWit u w bbWit)
-    (witSubOnWit u w tiWit)
-    (witSubOnWit u w lamWit)
-    (witSubOnWit u w appWit)
-    (witSubOnWit u w letWit)
-    (witSubOnWit u w trplWit)
+    (avarSubOnWit u w rWit)
+    (avarSubOnWit u w tWit)
+    (avarSubOnWit u w baWit)
+    (avarSubOnWit u w bbWit)
+    (avarSubOnWit u w tiWit)
+    (avarSubOnWit u w lamWit)
+    (avarSubOnWit u w appWit)
+    (avarSubOnWit u w letWit)
+    (avarSubOnWit u w trplWit)
 
 getSource :: L.Trail -> L.Witness
 getSource (L.RTrail witness) =
@@ -87,6 +113,42 @@ getSource (L.TrplTrail
     (getSource appTrail)
     (getSource letTrail)
     (getSource trplTrail)
+
+getTarget :: L.Trail -> L.Witness
+getTarget (L.RTrail s) = s
+getTarget (L.TTrail trail1 trail2) = getTarget trail2
+getTarget (L.BaTrail var varType bodyWit argWit) =
+  varSubOnWit var argWit bodyWit
+getTarget (L.BbTrail var varType argWit bodyWit) =
+  avarSubOnWit var argWit bodyWit
+getTarget (L.TiTrail trail rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+  undefined
+getTarget (L.LamTrail var varType bodyTrail) =
+  L.LamWit var varType (getTarget bodyTrail)
+getTarget (L.AppTrail lamTrail argTrail) =
+  L.AppWit (getTarget lamTrail) (getTarget argTrail)
+getTarget (L.LetTrail var varType argTrail bodyTrail) =
+  L.LetWit var varType (getTarget argTrail) (getTarget bodyTrail)
+getTarget (L.TrplTrail
+    rTrail
+    tTrail
+    baTrail
+    bbTrail
+    tiTrail
+    absTrail
+    appTrail
+    letTrail
+    trplTrail) =
+  L.TiWit
+    (getTarget rTrail)
+    (getTarget tTrail)
+    (getTarget baTrail)
+    (getTarget bbTrail)
+    (getTarget tiTrail)
+    (getTarget absTrail)
+    (getTarget appTrail)
+    (getTarget letTrail)
+    (getTarget trplTrail)
 
 getWit :: L.Exp -> L.Witness
 getWit (L.Number n) =

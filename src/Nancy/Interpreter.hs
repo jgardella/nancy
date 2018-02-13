@@ -45,9 +45,9 @@ interpretExpression (App lam arg) = do
   (lamVal, lamTrail) <- interpretExpression lam
   case lamVal of
     (LamVal var varType body) -> do
-      (argVal, argTrail) <- local (updateTrail $ updateTrailForArg lamTrail arg) (interpretExpression arg)
+      (argVal, argTrail) <- local (updateTrailForArg lamTrail arg) (interpretExpression arg)
       (result, resultTrail) <-
-        local (updateTrail $ updateTrailForBody lamTrail argTrail var varType)
+        local (updateTrailForBody lamTrail argTrail var varType)
           (interpretExpression (varSub argVal var body))
       return (result, getReturnTrail lamTrail argTrail var varType resultTrail currentTrail)
     _ ->
@@ -66,7 +66,7 @@ interpretExpression (App lam arg) = do
       <--> resultTrail
 interpretExpression (Bang body bangTrail) = do
   currentTrail <- ask
-  (bodyVal, bodyTrail) <- local (updateTrail $ const bangTrail) (interpretExpression body)
+  (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
   return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), currentTrail)
 interpretExpression (Let var varType arg body) = do
   currentTrail <- ask
@@ -74,7 +74,7 @@ interpretExpression (Let var varType arg body) = do
   case argValue of
     (L.BangVal bangVal bangTrail) -> do
       (resultVal, resultTrail) <-
-        local (updateTrail $ updateTrailForBody argTrail bangTrail bangVal body var varType)
+        local (updateTrailForBody argTrail bangTrail bangVal body var varType)
           (interpretExpression (termSub body bangTrail (getSource bangTrail) var))
       return (resultVal, getReturnTrail argTrail bangTrail bangVal body var varType resultTrail currentTrail)
     _ -> throwError (Err.ExpectedBang argValue)
