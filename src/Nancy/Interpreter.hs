@@ -48,7 +48,7 @@ interpretExpression (App lam arg) = do
       (argVal, argTrail) <- local (updateTrailForArg lamTrail arg) (interpretExpression arg)
       (result, resultTrail) <-
         local (updateTrailForBody lamTrail argTrail var varType)
-          (interpretExpression (varSub argVal var body))
+          (interpretExpression (simpleTermSub argVal var body))
       return (result, getReturnTrail lamTrail argTrail var varType resultTrail currentTrail)
     _ ->
       throwError (Err.ExpectedLam lamVal)
@@ -75,7 +75,7 @@ interpretExpression (Let var varType arg body) = do
     (L.BangVal bangVal bangTrail) -> do
       (resultVal, resultTrail) <-
         local (updateTrailForBody argTrail bangTrail bangVal body var varType)
-          (interpretExpression (termSub body bangTrail (getSource bangTrail) var))
+          (interpretExpression (auditedTermSub body bangTrail (getSource bangTrail) var))
       return (resultVal, getReturnTrail argTrail bangTrail bangVal body var varType resultTrail currentTrail)
     _ -> throwError (Err.ExpectedBang argValue)
   where
@@ -83,23 +83,24 @@ interpretExpression (Let var varType arg body) = do
       currentTrail
       <--> L.LetTrail var varType argTrail (L.RTrail $ getWit body)
       <--> L.BbTrail var varType (getSource bangTrail) (getWit body)
-      <--> trailSub body bangTrail (getSource bangTrail) var
+      <--> auditedTrailSub body bangTrail (getSource bangTrail) var
     getReturnTrail argTrail bangTrail bangVal body var varType resultTrail currentTrail =
       currentTrail
       <--> L.LetTrail var varType argTrail (L.RTrail $ getWit body)
       <--> L.BbTrail var varType (getSource bangTrail) (getWit body)
-      <--> trailSub body bangTrail (getSource bangTrail) var
+      <--> auditedTrailSub body bangTrail (getSource bangTrail) var
       <--> resultTrail
 interpretExpression
   inspect@(Inspect
-    rExp
-    tExp
-    baExp
-    bbExp
-    tiExp
-    lamExp
-    appExp
-    letExp
-    trplExp
-  ) =
+    (TrailBranches
+      rExp
+      tExp
+      baExp
+      bbExp
+      tiExp
+      lamExp
+      appExp
+      letExp
+      trplExp
+    )) =
   undefined

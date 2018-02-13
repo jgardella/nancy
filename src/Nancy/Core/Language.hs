@@ -26,7 +26,7 @@ data Witness
   | AVarWit String
   | BangWit Witness
   | LetWit String Type Witness Witness
-  | TiWit Witness Witness Witness Witness Witness Witness Witness Witness Witness
+  | TiWit (TrailBranches Witness)
   deriving (Eq, Show)
 
 instance Pretty Witness where
@@ -40,7 +40,7 @@ instance Pretty Witness where
   pPrint (LetWit u t p1 p2) =
     text "letwit(" <> text u <> text ":" <> pPrint t <> text ","
       <+> pPrint p1 <> text "," <+> pPrint p2 <> text ")"
-  pPrint (TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+  pPrint (TiWit (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
     text "tiwit("
       <> pPrint rWit <> text ","
       <+> pPrint tWit <> text ","
@@ -52,17 +52,33 @@ instance Pretty Witness where
       <+> pPrint letWit <> text ","
       <+> pPrint trplWit <> text ")"
 
+data TrailBranches a = TrailBranches a a a a a a a a a
+  deriving (Eq, Show)
+
+instance Functor TrailBranches where
+  fmap f (TrailBranches rB tB baB bbB tiB lamB appB letB trplB) =
+    TrailBranches
+      (f rB)
+      (f tB)
+      (f baB)
+      (f bbB)
+      (f tiB)
+      (f lamB)
+      (f appB)
+      (f letB)
+      (f trplB)
+
 data Trail
     = EmptyT
     | RTrail Witness
     | TTrail Trail Trail
     | BaTrail String Type Witness Witness
     | BbTrail String Type Witness Witness
-    | TiTrail Trail Witness Witness Witness Witness Witness Witness Witness Witness Witness
+    | TiTrail Trail (TrailBranches Witness)
     | LamTrail String Type Trail
     | AppTrail Trail Trail
     | LetTrail String Type Trail Trail
-    | TrplTrail Trail Trail Trail Trail Trail Trail Trail Trail Trail
+    | TrplTrail (TrailBranches Trail)
     deriving (Eq, Show)
 
 (<-->) :: Trail -> Trail -> Trail
@@ -84,7 +100,7 @@ instance Pretty Trail where
          , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
          , nest 2 (pPrint w2)
          , text ")"]
-  pPrint (TiTrail trail rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit) =
+  pPrint (TiTrail trail (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
     text "ti("
       <> pPrint rWit <> text ","
       <+> pPrint tWit <> text ","
@@ -109,7 +125,7 @@ instance Pretty Trail where
          , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint e1 <> text ",")
          , nest 2 (pPrint e2)
          , text ")"]
-  pPrint (TrplTrail rTrl tTrl baTrl bbTrl tiTrl lamTrl appTrl letTrl trplTrl) =
+  pPrint (TrplTrail (TrailBranches rTrl tTrl baTrl bbTrl tiTrl lamTrl appTrl letTrl trplTrl)) =
     text "trpl("
       <> pPrint rTrl <> text ","
       <+> pPrint tTrl <> text ","
@@ -135,7 +151,7 @@ data Exp
   | AVar String
   | Bang Exp Trail
   | Let String Type Exp Exp
-  | Inspect Exp Exp Exp Exp Exp Exp Exp Exp Exp
+  | Inspect (TrailBranches Exp)
   deriving (Eq, Show)
 
 data Value

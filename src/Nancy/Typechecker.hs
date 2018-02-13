@@ -74,12 +74,13 @@ typecheckExpression (Let u uType arg body) = do
   case argType of
     (L.BangType bangType bangWit) | bangType == uType -> do
       (bodyType, bodyWit) <- local (updateWitnessEnv $ E.save u bangType) (typecheckExpression body)
-      return (witSubOnType u bangWit bodyType, L.LetWit u uType bodyWit argWit)
+      return (witSubOverAVarOnType u bangWit bodyType, L.LetWit u uType bodyWit argWit)
     (L.BangType bangType _) | bangType /= uType ->
       throwError (Err.InvalidLetArgType uType bangType)
     t -> throwError (Err.ExpectedBang argType)
 typecheckExpression
   (Inspect
+   (TrailBranches
     rExp
     tExp
     baExp
@@ -88,7 +89,8 @@ typecheckExpression
     lamExp
     appExp
     letExp
-    trplExp)
+    trplExp
+  ))
     = do
   (rType, rWit) <- local keepWitEnv (typecheckExpression rExp)
   (tType, tWit) <- local keepWitEnv (typecheckExpression tExp)
@@ -105,7 +107,7 @@ typecheckExpression
     && appType == createLamType rType 2
     && letType == createLamType rType 2
     && trplType == createLamType rType 9
-  then return (rType, L.TiWit rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)
+  then return (rType, L.TiWit (L.TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit))
   else throwError Err.InconsistentTrailMappings
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)

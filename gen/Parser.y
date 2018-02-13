@@ -75,7 +75,7 @@ Exp       : id                               { Var $1 }
               app '->' Exp
               let '->' Exp
               trpl '->' Exp
-            '}' { Inspect $5 $8 $11 $14 $17 $20 $23 $26 $29 }
+            '}' { Inspect (TrailBranches $5 $8 $11 $14 $17 $20 $23 $26 $29) }
 
 {
 lexwrap :: (Token -> Alex a) -> Alex a
