@@ -11,6 +11,12 @@ data Type
   | BangType Type Witness
   deriving (Eq, Show)
 
+mapType _ typeFunc (LamType argType returnType) =
+  LamType (typeFunc argType) (typeFunc returnType)
+mapType witFunc typeFunc (BangType bangType bangWit) =
+  BangType (typeFunc bangType) (witFunc bangWit)
+mapType witFunc typeFunc otherType = otherType
+
 instance Pretty Type where
   pPrint IntType = text "int"
   pPrint BoolType = text "bool"
@@ -28,6 +34,18 @@ data Witness
   | LetWit String Type Witness Witness
   | TiWit (TrailBranches Witness)
   deriving (Eq, Show)
+
+mapWitness typeFunc witFunc (LamWit var varType lamWit) =
+  LamWit var (typeFunc varType) (witFunc lamWit)
+mapWitness typeFunc witFunc (AppWit lamWit argWit) =
+  AppWit (witFunc lamWit) (witFunc argWit)
+mapWitness typeFunc witFunc (BangWit bangWit) =
+  BangWit $ witFunc bangWit
+mapWitness typeFunc witFunc (LetWit var varType argWit bodyWit) =
+  LetWit var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
+mapWitness typeFunc witFunc (TiWit branchWits) =
+  TiWit $ fmap (mapWitness typeFunc witFunc) branchWits
+mapWitness _ _ otherWitness = otherWitness
 
 instance Pretty Witness where
   pPrint (VarWit s) = text "varwit(" <> text s <> text ")"
@@ -69,8 +87,7 @@ instance Functor TrailBranches where
       (f trplB)
 
 data Trail
-    = EmptyT
-    | RTrail Witness
+    = RTrail Witness
     | TTrail Trail Trail
     | BaTrail String Type Witness Witness
     | BbTrail String Type Witness Witness
@@ -81,13 +98,32 @@ data Trail
     | TrplTrail (TrailBranches Trail)
     deriving (Eq, Show)
 
+mapTrail :: (Witness -> Witness) -> (Trail -> Trail) -> (Type -> Type) -> Trail -> Trail
+mapTrail witFunc _ _ (RTrail rWit) =
+  RTrail $ witFunc rWit
+mapTrail witFunc trailFunc _ (TTrail trail1 trail2) =
+  TTrail (trailFunc trail1) (trailFunc trail2)
+mapTrail witFunc trailFunc typeFunc (BaTrail var varType argWit bodyWit) =
+  BaTrail var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
+mapTrail witFunc trailFunc typeFunc (BbTrail var varType argWit bodyWit) =
+  BbTrail var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
+mapTrail witFunc trailFunc _ (TiTrail trail branchWits) =
+  TiTrail (trailFunc trail) (fmap witFunc branchWits)
+mapTrail witFunc trailFunc typeFunc (LamTrail var varType lamTrail) =
+  LamTrail var (typeFunc varType) (trailFunc lamTrail)
+mapTrail witFunc trailFunc _ (AppTrail lamTrail argTrail) =
+  AppTrail (trailFunc lamTrail) (trailFunc argTrail)
+mapTrail witFunc trailFunc typeFunc (LetTrail var varType argTrail bodyTrail) =
+  LetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
+mapTrail witFunc trailFunc _ (TrplTrail branchTrails) =
+  TrplTrail $ fmap trailFunc branchTrails
+
 (<-->) :: Trail -> Trail -> Trail
 trailOne <--> trailTwo = TTrail trailOne trailTwo
 
 infixl 0 <-->
 
 instance Pretty Trail where
-  pPrint EmptyT = text "emptyT"
   pPrint (RTrail w) = text "r(" <> pPrint w <> text ")"
   pPrint (TTrail e1 e2) = pPrint e1 <> text ";" <> pPrint e2
   pPrint (BaTrail s t w1 w2) =
@@ -153,6 +189,19 @@ data Exp
   | Let String Type Exp Exp
   | Inspect (TrailBranches Exp)
   deriving (Eq, Show)
+
+mapExp f (Brack exp) = f exp
+mapExp f (Lam var varType bodyExp) =
+  Lam var varType (f bodyExp)
+mapExp f (App lamExp argExp) =
+  App (f lamExp) (f argExp)
+mapExp f (Bang bangExp bangTrail) =
+  Bang (f bangExp) bangTrail
+mapExp f (Let var varType argExp bodyExp) =
+  Let var varType (f argExp) (f bodyExp)
+mapExp f (Inspect branches) =
+  Inspect $ fmap f branches
+mapExp f otherExp = otherExp
 
 data Value
   = IntVal Int

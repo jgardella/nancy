@@ -1,6 +1,6 @@
 module Nancy.Core.Util where
 
-import qualified Nancy.Core.Language as L
+import Nancy.Core.Language as L
 import Nancy.Core.Errors.Interpreter as Err
 import Nancy.Core.Env
 import qualified Data.Map as Map
@@ -16,47 +16,29 @@ allEqual [] = True
 allEqual (x:xs) = all (== x) xs
 
 witSubOverVar :: String -> L.Witness -> L.Witness -> L.Witness
-witSubOverVar _ _ same@(L.IntWit _) = same
-witSubOverVar _ _ same@(L.BoolWit _) = same
 witSubOverVar a w same@(L.VarWit var)
   | a == var = w
   | a /= var = same
-witSubOverVar _ _ same@(L.AVarWit _) = same
-witSubOverVar a w (L.LamWit arg argType bodyWit) =
-  L.LamWit arg argType (witSubOverVar a w bodyWit)
-witSubOverVar a w (L.AppWit lamWit argWit) =
-  L.AppWit (witSubOverVar a w lamWit) (witSubOverVar a w argWit)
 witSubOverVar _ _ same@(L.BangWit _) = same
-witSubOverVar a w (L.LetWit var varType argWit bodyWit) =
-  L.LetWit var varType (witSubOverVar a w argWit) (witSubOverVar a w bodyWit)
-witSubOverVar a w (L.TiWit branches) =
-  L.TiWit $ fmap (witSubOverVar a w) branches
+witSubOverVar a w otherWit =
+  mapWitness id (witSubOverVar a w) otherWit
 
 witSubOverAVarOnType :: String -> L.Witness -> L.Type -> L.Type
-witSubOverAVarOnType _ _ same@L.IntType = same
-witSubOverAVarOnType _ _ same@L.BoolType = same
-witSubOverAVarOnType u w (L.LamType argType bodyType) =
-  L.LamType (witSubOverAVarOnType u w argType) (witSubOverAVarOnType u w bodyType)
-witSubOverAVarOnType u w (L.BangType bangType bangWit) =
-  L.BangType (witSubOverAVarOnType u w bangType) (witSubOverAVarOnWit u w bangWit)
+witSubOverAVarOnType u w =
+  mapType (witSubOverAVarOnWit u w) (witSubOverAVarOnType u w)
 
 witSubOverAVarOnWit :: String -> L.Witness -> L.Witness -> L.Witness
-witSubOverAVarOnWit _ _ same@(L.VarWit _) = same
 witSubOverAVarOnWit u w same@(L.AVarWit var)
   | u == var = w
   | u /= var = same
-witSubOverAVarOnWit _ _ same@(L.IntWit _) = same
-witSubOverAVarOnWit _ _ same@(L.BoolWit _) = same
-witSubOverAVarOnWit u w (L.LamWit arg argType bodyWit) =
-  L.LamWit arg argType (witSubOverAVarOnWit u w bodyWit)
-witSubOverAVarOnWit u w (L.AppWit leftWit rightWit) =
-  L.AppWit (witSubOverAVarOnWit u w leftWit) (witSubOverAVarOnWit u w rightWit)
-witSubOverAVarOnWit u w (L.BangWit bangWit) =
-  L.BangWit (witSubOverAVarOnWit u w bangWit)
-witSubOverAVarOnWit u w (L.LetWit var varType argWit bodyWit) =
-  L.LetWit var varType (witSubOverAVarOnWit u w argWit) (witSubOverAVarOnWit u w bodyWit)
-witSubOverAVarOnWit u w (L.TiWit branches) =
-  L.TiWit $ fmap (witSubOverAVarOnWit u w) branches
+witSubOverAVarOnWit u w otherWit =
+  mapWitness id (witSubOverAVarOnWit u w) otherWit
+
+witSubOverAVarOnTrail u w =
+  mapTrail
+    (witSubOverAVarOnWit u w)
+    (witSubOverAVarOnTrail u w)
+    (witSubOverAVarOnType u w)
 
 valueToExp :: L.Value -> L.Exp
 valueToExp (L.IntVal n) = L.Number n
@@ -67,22 +49,38 @@ valueToExp (L.LamVal arg argType body) = L.Lam arg argType body
 valueToExp (L.BangVal bodyVal trail) = L.Bang (valueToExp bodyVal) trail
 
 valueSubOverVar :: L.Value -> String -> L.Exp -> L.Exp
-valueSubOverVar _ _  same@(L.Number _) = same
-valueSubOverVar _ _ same@(L.Boolean _) = same
-valueSubOverVar value var (L.Brack exp) = L.Brack (valueSubOverVar value var exp)
 valueSubOverVar value var same@(L.Var x)
   | x == var = valueToExp value
   | x /= var = same
-valueSubOverVar _ _ same@(L.AVar _) = same
-valueSubOverVar value var (L.Lam arg argType body) =
-  L.Lam arg argType (valueSubOverVar value var body)
-valueSubOverVar value var (L.App lam arg) =
-  L.App (valueSubOverVar value var lam) (valueSubOverVar value var arg)
 valueSubOverVar value var same@L.Bang{} = same
-valueSubOverVar value var (L.Let letVar letVarType arg body) =
-  L.Let letVar letVarType (valueSubOverVar value var arg) (valueSubOverVar value var body)
-valueSubOverVar value var (L.Inspect branches) =
-  L.Inspect $ fmap (valueSubOverVar value var) branches
+valueSubOverVar value var otherExp =
+  mapExp (valueSubOverVar value var) otherExp
+
+termSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Exp -> L.Exp
+termSubOverAVar trail var val _ same@(L.AVar u)
+  | u == var = valueToExp val
+  | u /= var = same
+termSubOverAVar trail var val wit (L.Bang bangExp bangTrail) =
+  L.Bang (termSubOverAVar trail var val wit bangExp) (witSubOverAVarOnTrail var wit bangTrail <--> trailSubOverAVar trail var val wit bangExp)
+termSubOverAVar trail var val wit otherExp =
+  mapExp (termSubOverAVar trail var val wit) otherExp
+
+trailSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Exp -> L.Trail
+trailSubOverAVar _ _ _ _ exp@(L.Var x) =
+  L.RTrail $ getWit exp
+trailSubOverAVar trail var _ _ exp@(L.AVar u)
+  | u == var = trail
+  | u /= var = L.RTrail $ getWit exp
+trailSubOverAVar trail var val wit (L.Lam arg argType argExp) =
+  L.LamTrail arg argType (trailSubOverAVar trail var val wit argExp)
+trailSubOverAVar trail var val wit (L.App lamExp argExp) =
+  L.AppTrail (trailSubOverAVar trail var val wit lamExp) (trailSubOverAVar trail var val wit argExp)
+trailSubOverAVar trail var val wit (L.Bang bangExp bangTrail) =
+  L.RTrail $ L.BangWit $ witSubOverAVarOnWit var wit (getSource bangTrail)
+trailSubOverAVar trail var val wit (L.Let letVar letVarType argExp bodyExp) =
+  L.LetTrail letVar letVarType (trailSubOverAVar trail var val wit argExp) (trailSubOverAVar trail var val wit bodyExp)
+trailSubOverAVar trail var val wit (L.Inspect branches) =
+  L.TrplTrail $ fmap (trailSubOverAVar trail var val wit) branches
 
 getSource :: L.Trail -> L.Witness
 getSource (L.RTrail witness) =
