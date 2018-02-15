@@ -66,8 +66,6 @@ termSubOverAVar trail var val wit otherExp =
   mapExp (termSubOverAVar trail var val wit) otherExp
 
 trailSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Exp -> L.Trail
-trailSubOverAVar _ _ _ _ exp@(L.Var x) =
-  L.RTrail $ getWit exp
 trailSubOverAVar trail var _ _ exp@(L.AVar u)
   | u == var = trail
   | u /= var = L.RTrail $ getWit exp
@@ -81,6 +79,8 @@ trailSubOverAVar trail var val wit (L.Let letVar letVarType argExp bodyExp) =
   L.LetTrail letVar letVarType (trailSubOverAVar trail var val wit argExp) (trailSubOverAVar trail var val wit bodyExp)
 trailSubOverAVar trail var val wit (L.Inspect branches) =
   L.TrplTrail $ fmap (trailSubOverAVar trail var val wit) branches
+trailSubOverAVar _ _ _ _ other =
+  L.RTrail $ getWit other
 
 getSource :: L.Trail -> L.Witness
 getSource (L.RTrail witness) =

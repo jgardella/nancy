@@ -70,8 +70,17 @@ instance Pretty Witness where
       <+> pPrint letWit <> text ","
       <+> pPrint trplWit <> text ")"
 
-data TrailBranches a = TrailBranches a a a a a a a a a
-  deriving (Eq, Show)
+data TrailBranches a = TrailBranches {
+  rB :: a,
+  tB :: a,
+  baB :: a,
+  bbB :: a,
+  tiB :: a,
+  lamB :: a,
+  appB :: a,
+  letB :: a,
+  trplB :: a
+} deriving (Eq, Show)
 
 instance Functor TrailBranches where
   fmap f (TrailBranches rB tB baB bbB tiB lamB appB letB trplB) =
@@ -117,6 +126,29 @@ mapTrail witFunc trailFunc typeFunc (LetTrail var varType argTrail bodyTrail) =
   LetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
 mapTrail witFunc trailFunc _ (TrplTrail branchTrails) =
   TrplTrail $ fmap trailFunc branchTrails
+
+data TrailFoldFunctions a = TrailFoldFunctions {
+  rVal :: a,
+  tFunc :: Trail -> Trail -> a,
+  baVal :: a,
+  bbVal :: a,
+  tiVal :: a,
+  lamFunc :: Trail -> a,
+  appFunc :: Trail -> Trail -> a,
+  letFunc :: Trail -> Trail -> a,
+  trplFunc :: TrailBranches Trail -> a
+}
+
+foldTrail :: TrailFoldFunctions a -> Trail -> a
+foldTrail TrailFoldFunctions{ rVal=val } trl@RTrail{} = val
+foldTrail TrailFoldFunctions{ tFunc=f } (TTrail trail1 trail2) = f trail1 trail2
+foldTrail TrailFoldFunctions{ baVal=v } trl@BaTrail{} = v
+foldTrail TrailFoldFunctions{ bbVal=v } trl@BbTrail{} = v
+foldTrail TrailFoldFunctions{ tiVal=v } trl@TiTrail{} = v
+foldTrail TrailFoldFunctions{ lamFunc=f } (LamTrail _ _ bodyTrail) = f bodyTrail
+foldTrail TrailFoldFunctions{ appFunc=f } (AppTrail lamTrail argTrail) = f lamTrail argTrail
+foldTrail TrailFoldFunctions{ letFunc=f } (LetTrail _ _ argTrail bodyTrail) = f argTrail bodyTrail
+foldTrail TrailFoldFunctions{ trplFunc=f } (TrplTrail branches) = f branches
 
 (<-->) :: Trail -> Trail -> Trail
 trailOne <--> trailTwo = TTrail trailOne trailTwo

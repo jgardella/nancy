@@ -12,6 +12,7 @@ data InterpreterE
   | ValidityVarUndefined String
   | ExpectedBang Value
   | InvalidTrailRename String
+  | BadTrailValue
   deriving (Eq, Show)
 
 instance Pretty InterpreterE where
@@ -25,5 +26,5 @@ instance Pretty InterpreterE where
     text "Validity variable" <+> text wVar <+> text "is not defined"
   pPrint (ExpectedBang value) =
     text "Expected Bang value, but got" <+> pPrint value
-  pPrint (InvalidTrailRename old) =
-    text "Invalid trail rename, no existing trail variable '" <> text old <> text "'"
+  pPrint BadTrailValue  =
+    text "Bad trail value"
