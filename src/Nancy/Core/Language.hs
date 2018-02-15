@@ -153,7 +153,7 @@ foldTrail TrailFoldFunctions{ trplFunc=f } (TrplTrail branches) = f branches
 (<-->) :: Trail -> Trail -> Trail
 trailOne <--> trailTwo = TTrail trailOne trailTwo
 
-infixl 0 <-->
+infixr 0 <-->
 
 instance Pretty Trail where
   pPrint (RTrail wit) = text "r(" <> pPrint wit <> text ")"
