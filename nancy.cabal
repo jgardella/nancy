@@ -21,7 +21,7 @@ library
     src
   exposed-modules:
     Nancy.Typechecker,
---    Nancy.Interpreter,
+    Nancy.Interpreter,
     Nancy.Parser,
     Nancy.Lexer,
     Nancy.Helper,

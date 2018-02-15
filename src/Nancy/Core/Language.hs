@@ -20,8 +20,8 @@ mapType witFunc typeFunc otherType = otherType
 instance Pretty Type where
   pPrint IntType = text "int"
   pPrint BoolType = text "bool"
-  pPrint (LamType l r) = pPrint l <+> text "->" <+> pPrint r
-  pPrint (BangType t w) = text "[" <> pPrint w <> text "]" <+> pPrint t
+  pPrint (LamType argType returnType) = pPrint argType <+> text "->" <+> pPrint returnType
+  pPrint (BangType bodyType witness) = text "[" <> pPrint witness <> text "]" <+> pPrint bodyType
 
 data Witness
   = VarWit String
@@ -48,16 +48,16 @@ mapWitness typeFunc witFunc (TiWit branchWits) =
 mapWitness _ _ otherWitness = otherWitness
 
 instance Pretty Witness where
-  pPrint (VarWit s) = text "varwit(" <> text s <> text ")"
-  pPrint (IntWit i) = text "intwit(" <> text (show i) <> text ")"
-  pPrint (BoolWit b) = text "boolwit(" <> text (show b) <> text ")"
-  pPrint (LamWit s t p) = text "lamwit(" <> text s <> text ":" <> pPrint t <> text "," <+> pPrint p <> text ")"
-  pPrint (AppWit p1 p2) = text "appwit(" <> pPrint p1 <> text ", " <> pPrint p2 <> text ")"
-  pPrint (AVarWit u) = text "avarwit(" <> text u <> text ")"
-  pPrint (BangWit w) = text "bangwit(" <> pPrint w <> text")"
-  pPrint (LetWit u t p1 p2) =
-    text "letwit(" <> text u <> text ":" <> pPrint t <> text ","
-      <+> pPrint p1 <> text "," <+> pPrint p2 <> text ")"
+  pPrint (VarWit var) = text "varwit(" <> text var <> text ")"
+  pPrint (IntWit intVal) = text "intwit(" <> text (show intVal) <> text ")"
+  pPrint (BoolWit boolVal) = text "boolwit(" <> text (show boolVal) <> text ")"
+  pPrint (LamWit arg argType bodyWit) = text "lamwit(" <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint bodyWit <> text ")"
+  pPrint (AppWit lamWit argWit) = text "appwit(" <> pPrint lamWit <> text ", " <> pPrint argWit <> text ")"
+  pPrint (AVarWit avar) = text "avarwit(" <> text avar <> text ")"
+  pPrint (BangWit bangWit) = text "bangwit(" <> pPrint bangWit <> text")"
+  pPrint (LetWit arg argType argWit bodyWit) =
+    text "letwit(" <> text arg <> text ":" <> pPrint argType <> text ","
+      <+> pPrint argWit <> text "," <+> pPrint bodyWit <> text ")"
   pPrint (TiWit (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
     text "tiwit("
       <> pPrint rWit <> text ","
@@ -124,18 +124,18 @@ trailOne <--> trailTwo = TTrail trailOne trailTwo
 infixl 0 <-->
 
 instance Pretty Trail where
-  pPrint (RTrail w) = text "r(" <> pPrint w <> text ")"
-  pPrint (TTrail e1 e2) = pPrint e1 <> text ";" <> pPrint e2
-  pPrint (BaTrail s t w1 w2) =
-    vcat [ text "ba("
-         , nest 2 (text s <> text ":" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
-         , nest 2 (pPrint w2)
-         , text ")"]
-  pPrint (BbTrail u t w1 w2) =
-    vcat [ text "bb("
-         , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint w1 <> text ",")
-         , nest 2 (pPrint w2)
-         , text ")"]
+  pPrint (RTrail wit) = text "r(" <> pPrint wit <> text ")"
+  pPrint (TTrail trail1 trail2) = pPrint trail1 <> text ";" <> pPrint trail2
+  pPrint (BaTrail arg argType argWit bodyWit) =
+    text "ba("
+    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint argWit <> text ","
+    <+> pPrint bodyWit
+    <> text ")"
+  pPrint (BbTrail arg argType argWit bodyWit) =
+    text "bb("
+    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint argWit <> text ","
+    <+> pPrint bodyWit
+    <> text ")"
   pPrint (TiTrail trail (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
     text "ti("
       <> pPrint rWit <> text ","
@@ -147,20 +147,20 @@ instance Pretty Trail where
       <+> pPrint appWit <> text ","
       <+> pPrint letWit <> text ","
       <+> pPrint trplWit <> text ")"
-  pPrint (LamTrail s t e) =
-    vcat [ text "lam("
-         , nest 2 (text s <> text ":" <> pPrint t <+> text "." <> pPrint e)
-         , text ")"]
-  pPrint (AppTrail e1 e2) =
-    vcat [ text "app("
-         , nest 2 (pPrint e1 <> text ",")
-         , nest 2 (pPrint e2)
-         , text ")"]
-  pPrint (LetTrail u t e1 e2) =
-    vcat [ text "let("
-         , nest 2 (text u <> text ":" <> pPrint t <+> text "." <> pPrint e1 <> text ",")
-         , nest 2 (pPrint e2)
-         , text ")"]
+  pPrint (LamTrail arg argType bodyTrail) =
+    text "lam("
+    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint bodyTrail
+    <> text ")"
+  pPrint (AppTrail lamTrail argTrail) =
+    text "app("
+    <> pPrint lamTrail <> text ","
+    <+> pPrint argTrail
+    <> text ")"
+  pPrint (LetTrail arg argType argTrail bodyTrail) =
+    text "let("
+    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint argTrail <> text ","
+    <+> pPrint bodyTrail
+    <> text ")"
   pPrint (TrplTrail (TrailBranches rTrl tTrl baTrl bbTrl tiTrl lamTrl appTrl letTrl trplTrl)) =
     text "trpl("
       <> pPrint rTrl <> text ","
@@ -172,7 +172,6 @@ instance Pretty Trail where
       <+> pPrint appTrl <> text ","
       <+> pPrint letTrl <> text ","
       <+> pPrint trplTrl <> text ")"
-
 
 newtype Program = Program Exp
   deriving Show
