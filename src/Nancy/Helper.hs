@@ -25,7 +25,7 @@ parseAndTypecheckWithEnv source input env = do
   parseResult <- parse source input
   typecheckProgram env parseResult
 
-parseAndInterpret :: FilePath -> String -> (Either NancyError ValuePair, [String])
+parseAndInterpret :: FilePath -> String -> (Either NancyError Value, [String])
 parseAndInterpret source input =
   case parse source input of
     Right parseResult ->

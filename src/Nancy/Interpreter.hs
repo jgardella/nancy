@@ -22,9 +22,9 @@ type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (WriterT [Strin
 runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePair, [String])
 runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 
-interpretProgram :: Program -> (Either NancyError ValuePair, [String])
+interpretProgram :: Program -> (Either NancyError Value, [String])
 interpretProgram (Program exp) =
-  wrapError
+  processResult
   $ runInterpretM unusedInitialTrail (interpretExpression bangWrappedExp)
   where
     unusedInitialTrail = L.RTrail $ L.IntWit 0
@@ -32,8 +32,8 @@ interpretProgram (Program exp) =
       case exp of
         (Bang _ _) -> exp
         nonBangExp -> Bang nonBangExp (L.RTrail (getWit nonBangExp))
-    wrapError (result, logs) =
-      (mapLeft InterpretErr result, logs)
+    processResult (result, logs) =
+      (mapBoth InterpretErr fst result, logs)
 
 interpretExpression :: Exp -> InterpretM
 interpretExpression (Number n) =
