@@ -6,7 +6,7 @@ import Data.Semigroup((<>))
 import Nancy.Parser( parseProgram )
 import System.Environment ( getArgs )
 import Nancy.Typechecker
---import Nancy.Interpreter
+import Nancy.Interpreter
 import Nancy.Helper
 import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
@@ -66,9 +66,9 @@ main = do
       case typecheckResult of
         (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
         (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn
---    Interpret -> do
---      (interpretResult, logs) <- fmap (parseAndInterpret $ fileName args) input
---      mapM_ putStrLn logs
---      case interpretResult of
---        (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
---        (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn
+    Interpret -> do
+      (interpretResult, logs) <- fmap (parseAndInterpret $ fileName args) input
+      mapM_ putStrLn logs
+      case interpretResult of
+        (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
+        (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn

@@ -2,6 +2,7 @@ module Nancy.Interpreter where
 
 import Nancy.Core.Language as L
 import Text.Printf
+import Data.Either.Combinators
 import Nancy.Core.Util
 import Nancy.Core.Env as E
 import Nancy.Core.Errors
@@ -21,11 +22,16 @@ type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (WriterT [Strin
 runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePair, [String])
 runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 
-interpretProgram :: InterpretEnv -> Program -> (Either NancyError ValuePair, [String])
-interpretProgram env (Program exp) =
-  case runInterpretM env (interpretExpression exp) of
-    (Right x, l) -> (Right x, l)
-    (Left x, l) -> (Left $ InterpretErr x, l)
+interpretProgram :: Program -> (Either NancyError ValuePair, [String])
+interpretProgram (Program exp) =
+  mapLeft InterpretErr
+  $ runInterpretM unusedInitialTrail (interpretExpression bangWrappedExp)
+  where
+    unusedInitialTrail = L.RTrail $ L.IntWit 0
+    bangWrappedExp =
+      case exp of
+        (Bang _ _) -> exp
+        nonBangExp -> Bang nonBangExp (getWit nonBangExp)
 
 interpretExpression :: Exp -> InterpretM
 interpretExpression (Number n) =
