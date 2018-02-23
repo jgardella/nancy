@@ -109,18 +109,8 @@ getTarget (L.BaTrail var varType bodyWit argWit) =
   witSubOverVar var argWit bodyWit
 getTarget (L.BbTrail var varType argWit bodyWit) =
   witSubOverAVarOnWit var argWit bodyWit
-getTarget (L.TiTrail trail
-    (TrailBranches
-      rWit
-      tWit
-      baWit
-      bbWit
-      tiWit
-      lamWit
-      appWit
-      letWit
-      trplWit)) =
-  undefined
+getTarget (L.TiTrail trail branches) =
+  foldTrailToWit branches trail
 getTarget (L.LamTrail var varType bodyTrail) =
   L.LamWit var varType (getTarget bodyTrail)
 getTarget (L.AppTrail lamTrail argTrail) =
@@ -193,3 +183,45 @@ foldTrailToTerm foldBranches@L.TrailBranches{trplB=exp}
       L.App
         (foldHelper v xs)
         (foldTrailToTerm foldBranches x)
+
+foldTrailToWit :: L.TrailBranches L.Witness -> L.Trail -> L.Witness
+foldTrailToWit L.TrailBranches{rB=wit} (L.RTrail _) =
+  wit
+foldTrailToWit branches@L.TrailBranches{tB=wit} (L.TTrail t1 t2) =
+  L.AppWit
+    (L.AppWit
+     wit
+     (foldTrailToWit branches t1))
+    (foldTrailToWit branches t2)
+foldTrailToWit L.TrailBranches{baB=wit} L.BaTrail{} =
+  wit
+foldTrailToWit L.TrailBranches{bbB=wit} L.BbTrail{} =
+  wit
+foldTrailToWit L.TrailBranches{tiB=wit} L.TiTrail{} =
+  wit
+foldTrailToWit branches@L.TrailBranches{lamB=wit} (L.LamTrail _ _ bodyTrail) =
+  L.AppWit wit (foldTrailToWit branches bodyTrail)
+foldTrailToWit branches@ L.TrailBranches{appB=wit} (L.AppTrail lamTrail bodyTrail) =
+  L.AppWit
+    (L.AppWit
+     wit
+     (foldTrailToWit branches lamTrail))
+    (foldTrailToWit branches bodyTrail)
+foldTrailToWit branches@L.TrailBranches{letB=wit} (L.LetTrail _ _ argTrail bodyTrail) =
+  L.AppWit
+    (L.AppWit
+     wit
+     (foldTrailToWit branches argTrail))
+    (foldTrailToWit branches bodyTrail)
+foldTrailToWit foldBranches@L.TrailBranches{trplB=wit}
+  (L.TrplTrail trailBranches) =
+    foldHelper wit (trailBranchesToList trailBranches)
+  where
+    foldHelper v [x] =
+      L.AppWit
+        v
+        (foldTrailToWit foldBranches x)
+    foldHelper v (x:xs) =
+      L.AppWit
+        (foldHelper v xs)
+        (foldTrailToWit foldBranches x)
