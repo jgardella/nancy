@@ -136,7 +136,7 @@ getWit (L.Lam arg argType body) =
 getWit (L.App lam arg) =
   L.AppWit (getWit lam) (getWit arg)
 getWit (L.Bang exp trail) =
-  getSource trail
+  L.BangWit (getSource trail)
 getWit (L.Let u typ arg body) =
   L.LetWit u typ (getWit arg) (getWit body)
 getWit (L.Inspect branches) =

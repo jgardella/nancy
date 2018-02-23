@@ -69,10 +69,10 @@ interpretExpression (App lam arg) = do
       L.AppTrail lamTrail argTrail
       <--> L.BaTrail var varType (getTarget lamTrail) (getTarget argTrail)
       <--> resultTrail
-interpretExpression (Bang body bangTrail) = do
+interpretExpression exp@(Bang body bangTrail) = do
   currentTrail <- ask
   (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
-  return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), currentTrail)
+  return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit exp)
 interpretExpression (Let var varType arg body) = do
   currentTrail <- ask
   (argValue, argTrail) <- interpretExpression arg
@@ -133,7 +133,6 @@ interpretExpression
     foldExp =
       foldTrailToTerm foldBranchExps
         (updateTrailForFold rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail currentTrail)
-  tell [show foldExp]
   (foldValue, foldTrail) <-
     local (updateTrailForFold rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail)
           (interpretExpression foldExp)
