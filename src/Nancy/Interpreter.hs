@@ -118,72 +118,26 @@ interpretExpression
   (letValue, letTrail) <- local (updateTrailForLet rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail) (interpretExpression letExp)
   (trplValue, trplTrail) <- local (updateTrailForTrpl rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail) (interpretExpression trplExp)
   let
-    foldForInspect =
-      foldTrail TrailFoldFunctions{ rVal = return (rValue, rTrail),
-                                    tFunc = foldFor2Trails tValue,
-                                    baVal = return (baValue, baTrail),
-                                    bbVal = return (bbValue, bbTrail),
-                                    tiVal = return (tiValue, tiTrail),
-                                    lamFunc = foldFor1Trail lamValue,
-                                    appFunc = foldFor2Trails appValue,
-                                    letFunc = foldFor2Trails letValue,
-                                    trplFunc = foldForTrpl }
-    foldFor1Trail value trail =
-      case value of
-        L.LamVal arg _ body -> do
-          (value, foldTrail) <- foldForInspect trail
-          (resultValue, resultTrail) <- interpretExpression (valueSubOverVar value arg body)
-          return (resultValue, foldTrail <--> resultTrail)
-        _ ->
-          throwError Err.BadTrailValue
-    foldFor2Trails value trail1 trail2 =
-      case value of
-        L.LamVal arg1 _ (L.Lam arg2 _ body) -> do
-          (value1, foldTrail1) <- foldForInspect trail1
-          (value2, foldTrail2) <- foldForInspect trail2
-          (resultValue, resultTrail) <- interpretExpression (valueSubOverVar value1 arg1 (valueSubOverVar value2 arg2 body))
-          return (resultValue, foldTrail1 <--> foldTrail2 <--> resultTrail)
-        _ ->
-          throwError Err.BadTrailValue
-    foldForTrpl (TrailBranches rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail) =
-      case trplValue of
-        L.LamVal rArg _
-          (L.Lam tArg _
-          (L.Lam baArg _
-          (L.Lam bbArg _
-          (L.Lam tiArg _
-          (L.Lam lamArg _
-          (L.Lam appArg _
-          (L.Lam letArg _
-          (L.Lam trplArg _ body)))))))) -> do
-          (rVal, rFoldTrail) <- foldForInspect rTrail
-          (tVal, tFoldTrail) <- foldForInspect tTrail
-          (baVal, baFoldTrail) <- foldForInspect baTrail
-          (bbVal, bbFoldTrail) <- foldForInspect bbTrail
-          (tiVal, tiFoldTrail) <- foldForInspect tiTrail
-          (lamVal, lamFoldTrail) <- foldForInspect lamTrail
-          (appVal, appFoldTrail) <- foldForInspect appTrail
-          (letVal, letFoldTrail) <- foldForInspect letTrail
-          (trplVal, trplFoldTrail) <- foldForInspect trplTrail
-          (resultValue, resultTrail) <-
-            interpretExpression (valueSubOverVar rVal rArg
-                                (valueSubOverVar tVal tArg
-                                (valueSubOverVar baVal baArg
-                                (valueSubOverVar bbVal bbArg
-                                (valueSubOverVar tiVal tiArg
-                                (valueSubOverVar lamVal lamArg
-                                (valueSubOverVar appVal appArg
-                                (valueSubOverVar letVal letArg
-                                (valueSubOverVar trplVal trplArg body)))))))))
-          return (resultValue, rFoldTrail <--> tFoldTrail <--> baFoldTrail <--> bbFoldTrail
-                                 <--> tiFoldTrail <--> lamFoldTrail <--> appFoldTrail
-                                 <--> letFoldTrail <--> trplFoldTrail <--> resultTrail)
-        _ ->
-          throwError Err.BadTrailValue
-  (resultValue, resultTrail) <-
+    foldBranchExps =
+      valueToExp
+      <$> TrailBranches {
+        rB = rValue,
+        tB = tValue,
+        baB = baValue,
+        bbB = bbValue,
+        tiB = tiValue,
+        lamB = lamValue,
+        appB = appValue,
+        letB = letValue,
+        trplB = trplValue }
+    foldExp =
+      foldTrailToTerm foldBranchExps
+        (updateTrailForFold rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail currentTrail)
+  tell [show foldExp]
+  (foldValue, foldTrail) <-
     local (updateTrailForFold rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail)
-      (foldForInspect currentTrail)
-  return (resultValue, getReturnTrail rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail resultTrail currentTrail)
+          (interpretExpression foldExp)
+  return (foldValue, getResultTrail rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail foldTrail currentTrail)
   where
     base = fmap (L.RTrail . getWit) branches
     updateTrail trplTrail currentTrail =
@@ -217,12 +171,14 @@ interpretExpression
         currentTrail
         <--> L.TrplTrail finalTrplTrail
         <--> L.TiTrail currentWithTrpl (fmap getWit branches)
-    getReturnTrail rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail resultTrail currentTrail =
+    getResultTrail rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail foldTrail currentTrail =
       let
-        finalTrplTrail = L.TrplTrail TrailBranches { rB = rTrail, tB = tTrail, baB = baTrail, bbB = bbTrail,
-                                                      tiB = tiTrail, lamB = lamTrail, appB = appTrail,
-                                                      letB = letTrail, trplB = trplTrail }
+        finalTrplTrail = TrailBranches { rB = rTrail, tB = tTrail, baB = baTrail, bbB = bbTrail,
+                                         tiB = tiTrail, lamB = lamTrail, appB = appTrail,
+                                         letB = letTrail, trplB = trplTrail }
+        currentWithTrpl = currentTrail <--> L.TrplTrail finalTrplTrail
       in
-        finalTrplTrail
-        <--> L.TiTrail (currentTrail <--> finalTrplTrail) (fmap getWit branches)
-        <--> resultTrail
+        currentTrail
+        <--> L.TrplTrail finalTrplTrail
+        <--> L.TiTrail currentWithTrpl (fmap getWit branches)
+        <--> foldTrail

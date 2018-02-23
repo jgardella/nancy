@@ -95,6 +95,19 @@ instance Functor TrailBranches where
       (f letB)
       (f trplB)
 
+trailBranchesToList :: TrailBranches a -> [a]
+trailBranchesToList TrailBranches{
+  rB=rB ,
+  tB=tB,
+  baB=baB,
+  bbB=bbB,
+  tiB=tiB,
+  lamB=lamB,
+  appB=appB,
+  letB=letB,
+  trplB=trplB
+} = [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB]
+
 data Trail
     = RTrail Witness
     | TTrail Trail Trail
@@ -126,29 +139,6 @@ mapTrail witFunc trailFunc typeFunc (LetTrail var varType argTrail bodyTrail) =
   LetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
 mapTrail witFunc trailFunc _ (TrplTrail branchTrails) =
   TrplTrail $ fmap trailFunc branchTrails
-
-data TrailFoldFunctions a = TrailFoldFunctions {
-  rVal :: a,
-  tFunc :: Trail -> Trail -> a,
-  baVal :: a,
-  bbVal :: a,
-  tiVal :: a,
-  lamFunc :: Trail -> a,
-  appFunc :: Trail -> Trail -> a,
-  letFunc :: Trail -> Trail -> a,
-  trplFunc :: TrailBranches Trail -> a
-}
-
-foldTrail :: TrailFoldFunctions a -> Trail -> a
-foldTrail TrailFoldFunctions{ rVal=val } trl@RTrail{} = val
-foldTrail TrailFoldFunctions{ tFunc=f } (TTrail trail1 trail2) = f trail1 trail2
-foldTrail TrailFoldFunctions{ baVal=v } trl@BaTrail{} = v
-foldTrail TrailFoldFunctions{ bbVal=v } trl@BbTrail{} = v
-foldTrail TrailFoldFunctions{ tiVal=v } trl@TiTrail{} = v
-foldTrail TrailFoldFunctions{ lamFunc=f } (LamTrail _ _ bodyTrail) = f bodyTrail
-foldTrail TrailFoldFunctions{ appFunc=f } (AppTrail lamTrail argTrail) = f lamTrail argTrail
-foldTrail TrailFoldFunctions{ letFunc=f } (LetTrail _ _ argTrail bodyTrail) = f argTrail bodyTrail
-foldTrail TrailFoldFunctions{ trplFunc=f } (TrplTrail branches) = f branches
 
 (<-->) :: Trail -> Trail -> Trail
 trailOne <--> trailTwo = TTrail trailOne trailTwo

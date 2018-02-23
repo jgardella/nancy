@@ -120,59 +120,7 @@ getTarget (L.TiTrail trail
       appWit
       letWit
       trplWit)) =
-  foldForTiTarget trail
-  where
-    foldForTiTarget =
-      foldTrail TrailFoldFunctions{ rVal = rWit,
-                                    tFunc = foldFor2Trails tWit,
-                                    baVal = baWit,
-                                    bbVal = bbWit,
-                                    tiVal = tiWit,
-                                    lamFunc = foldFor1Trail lamWit,
-                                    appFunc = foldFor2Trails appWit,
-                                    letFunc = foldFor2Trails letWit,
-                                    trplFunc = foldForTrpl }
-    foldFor1Trail witness trail =
-      case witness of
-        L.LamWit arg _ bodyWit ->
-          let foldWit = foldForTiTarget trail
-          in witSubOverVar arg foldWit bodyWit
-    foldFor2Trails witness trail1 trail2 =
-      case witness of
-        L.LamWit arg1 _ (L.LamWit arg2 _ bodyWit) ->
-          let foldWit1 = foldForTiTarget trail1
-              foldWit2 = foldForTiTarget trail2
-          in witSubOverVar arg1 foldWit1 (witSubOverVar arg2 foldWit2 bodyWit)
-    foldForTrpl (TrailBranches rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail) =
-      case trplWit of
-        L.LamWit rArg _
-          (L.LamWit tArg _
-          (L.LamWit baArg _
-          (L.LamWit bbArg _
-          (L.LamWit tiArg _
-          (L.LamWit lamArg _
-          (L.LamWit appArg _
-          (L.LamWit letArg _
-          (L.LamWit trplArg _ bodyWit)))))))) ->
-          let
-            rFoldWit = foldForTiTarget rTrail
-            tFoldWit = foldForTiTarget tTrail
-            baFoldWit = foldForTiTarget baTrail
-            bbFoldWit = foldForTiTarget bbTrail
-            tiFoldWit = foldForTiTarget tiTrail
-            lamFoldWit = foldForTiTarget lamTrail
-            appFoldWit = foldForTiTarget appTrail
-            letFoldWit = foldForTiTarget letTrail
-            trplFoldWit = foldForTiTarget trplTrail
-          in witSubOverVar rArg rFoldWit
-             $ witSubOverVar tArg tFoldWit
-             $ witSubOverVar baArg baFoldWit
-             $ witSubOverVar bbArg bbFoldWit
-             $ witSubOverVar tiArg tiFoldWit
-             $ witSubOverVar lamArg lamFoldWit
-             $ witSubOverVar appArg appFoldWit
-             $ witSubOverVar letArg letFoldWit
-             $ witSubOverVar trplArg bodyWit trplFoldWit
+  undefined
 getTarget (L.LamTrail var varType bodyTrail) =
   L.LamWit var varType (getTarget bodyTrail)
 getTarget (L.AppTrail lamTrail argTrail) =
@@ -203,3 +151,45 @@ getWit (L.Let u typ arg body) =
   L.LetWit u typ (getWit arg) (getWit body)
 getWit (L.Inspect branches) =
   L.TiWit $ fmap getWit branches
+
+foldTrailToTerm :: L.TrailBranches L.Exp -> L.Trail -> L.Exp
+foldTrailToTerm L.TrailBranches{rB=exp} (L.RTrail _) =
+  exp
+foldTrailToTerm branches@L.TrailBranches{tB=exp} (L.TTrail t1 t2) =
+  L.App
+    (L.App
+     exp
+     (foldTrailToTerm branches t1))
+    (foldTrailToTerm branches t2)
+foldTrailToTerm L.TrailBranches{baB=exp} L.BaTrail{} =
+  exp
+foldTrailToTerm L.TrailBranches{bbB=exp} L.BbTrail{} =
+  exp
+foldTrailToTerm L.TrailBranches{tiB=exp} L.TiTrail{} =
+  exp
+foldTrailToTerm branches@L.TrailBranches{lamB=exp} (L.LamTrail _ _ bodyTrail) =
+  L.App exp (foldTrailToTerm branches bodyTrail)
+foldTrailToTerm branches@ L.TrailBranches{appB=exp} (L.AppTrail lamTrail bodyTrail) =
+  L.App
+    (L.App
+     exp
+     (foldTrailToTerm branches lamTrail))
+    (foldTrailToTerm branches bodyTrail)
+foldTrailToTerm branches@L.TrailBranches{letB=exp} (L.LetTrail _ _ argTrail bodyTrail) =
+  L.App
+    (L.App
+     exp
+     (foldTrailToTerm branches argTrail))
+    (foldTrailToTerm branches bodyTrail)
+foldTrailToTerm foldBranches@L.TrailBranches{trplB=exp}
+  (L.TrplTrail trailBranches) =
+    foldHelper exp (trailBranchesToList trailBranches)
+  where
+    foldHelper v [x] =
+      L.App
+        v
+        (foldTrailToTerm foldBranches x)
+    foldHelper v (x:xs) =
+      L.App
+        (foldHelper v xs)
+        (foldTrailToTerm foldBranches x)
