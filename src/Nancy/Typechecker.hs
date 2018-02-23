@@ -1,10 +1,6 @@
 module Nancy.Typechecker where
 
-import Data.Function((&))
-import Data.Either.Combinators
-import Nancy.Parser
 import Nancy.Core.Language as L
-import Text.Printf
 import Nancy.Core.Env as E
 import Nancy.Core.Errors
 import Nancy.Core.Errors.Typechecker as Err
@@ -12,8 +8,6 @@ import Nancy.Core.Util
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
-import Text.PrettyPrint
-import Text.PrettyPrint.HughesPJClass
 
 type TypePair = (L.Type, L.Witness)
 
@@ -33,8 +27,8 @@ updateWitnessEnv f (tEnv, wEnv) =
   (tEnv, f wEnv)
 
 typecheckProgram :: TypecheckEnv -> Program -> Either NancyError TypePair
-typecheckProgram env (Program exp) =
-  case runTypecheckM env (typecheckExpression exp) of
+typecheckProgram env (Program expr) =
+  case runTypecheckM env (typecheckExpression expr) of
     (Right x) -> Right x
     (Left x) -> Left $ TypecheckErr x
 
@@ -43,8 +37,8 @@ typecheckExpression (Number n) =
   return (L.IntType, L.IntWit n)
 typecheckExpression (Boolean b) =
   return (L.BoolType, L.BoolWit b)
-typecheckExpression (L.Brack exp) =
-  typecheckExpression exp
+typecheckExpression (L.Brack expr) =
+  typecheckExpression expr
 typecheckExpression (L.Var x) = do
   (tEnv, _) <- ask
   varType <- E.loadE x (Err.TruthVarUndefined x) tEnv
@@ -60,7 +54,7 @@ typecheckExpression (App left right) = do
       if rightType == argType
       then return (returnType, L.AppWit leftWit rightWit)
       else throwError (Err.InvalidArgType rightType argType)
-    t ->
+    _ ->
       throwError (Err.ExpectedLam left leftType)
 typecheckExpression (AVar u) = do
   (_, wEnv) <- ask
@@ -77,7 +71,7 @@ typecheckExpression (Let u uType arg body) = do
       return (witSubOverAVarOnType u bangWit bodyType, L.LetWit u uType bodyWit argWit)
     (L.BangType bangType _) | bangType /= uType ->
       throwError (Err.InvalidLetArgType uType bangType)
-    t -> throwError (Err.ExpectedBang argType)
+    _ -> throwError (Err.ExpectedBang argType)
 typecheckExpression
   (Inspect
    (TrailBranches
@@ -111,6 +105,7 @@ typecheckExpression
   else throwError Err.InconsistentTrailMappings
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)
+    createLamType :: L.Type -> Int -> L.Type
     createLamType t n
       | n <= 1 = L.LamType t t
       | otherwise = L.LamType t (createLamType t (n - 1))

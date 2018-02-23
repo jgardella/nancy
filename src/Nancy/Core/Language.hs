@@ -1,6 +1,5 @@
 module Nancy.Core.Language where
 
-import Nancy.Core.Env
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
@@ -11,11 +10,12 @@ data Type
   | BangType Type Witness
   deriving (Eq, Show)
 
+mapType :: (Witness -> Witness) -> (Type -> Type) -> Type -> Type
 mapType _ typeFunc (LamType argType returnType) =
   LamType (typeFunc argType) (typeFunc returnType)
 mapType witFunc typeFunc (BangType bangType bangWit) =
   BangType (typeFunc bangType) (witFunc bangWit)
-mapType witFunc typeFunc otherType = otherType
+mapType _ _ otherType = otherType
 
 instance Pretty Type where
   pPrint IntType = text "int"
@@ -35,11 +35,12 @@ data Witness
   | TiWit (TrailBranches Witness)
   deriving (Eq, Show)
 
+mapWitness :: (Type -> Type) -> (Witness -> Witness) -> Witness -> Witness
 mapWitness typeFunc witFunc (LamWit var varType lamWit) =
   LamWit var (typeFunc varType) (witFunc lamWit)
-mapWitness typeFunc witFunc (AppWit lamWit argWit) =
+mapWitness _ witFunc (AppWit lamWit argWit) =
   AppWit (witFunc lamWit) (witFunc argWit)
-mapWitness typeFunc witFunc (BangWit bangWit) =
+mapWitness _ witFunc (BangWit bangWit) =
   BangWit $ witFunc bangWit
 mapWitness typeFunc witFunc (LetWit var varType argWit bodyWit) =
   LetWit var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
@@ -83,30 +84,41 @@ data TrailBranches a = TrailBranches {
 } deriving (Eq, Show)
 
 instance Functor TrailBranches where
-  fmap f (TrailBranches rB tB baB bbB tiB lamB appB letB trplB) =
-    TrailBranches
-      (f rB)
-      (f tB)
-      (f baB)
-      (f bbB)
-      (f tiB)
-      (f lamB)
-      (f appB)
-      (f letB)
-      (f trplB)
+  fmap f TrailBranches{
+    rB=rVal ,
+    tB=tVal,
+    baB=baVal,
+    bbB=bbVal,
+    tiB=tiVal,
+    lamB=lamVal,
+    appB=appVal,
+    letB=letVal,
+    trplB=trplVal
+  } =
+    TrailBranches{
+      rB=f rVal,
+      tB=f tVal,
+      baB=f baVal,
+      bbB=f bbVal,
+      tiB=f tiVal,
+      lamB=f lamVal,
+      appB=f appVal,
+      letB=f letVal,
+      trplB=f trplVal
+    }
 
 trailBranchesToList :: TrailBranches a -> [a]
 trailBranchesToList TrailBranches{
-  rB=rB ,
-  tB=tB,
-  baB=baB,
-  bbB=bbB,
-  tiB=tiB,
-  lamB=lamB,
-  appB=appB,
-  letB=letB,
-  trplB=trplB
-} = [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB]
+  rB=rVal ,
+  tB=tVal,
+  baB=baVal,
+  bbB=bbVal,
+  tiB=tiVal,
+  lamB=lamVal,
+  appB=appVal,
+  letB=letVal,
+  trplB=trplVal
+} = [rVal, tVal, baVal, bbVal, tiVal, lamVal, appVal, letVal, trplVal]
 
 data Trail
     = RTrail Witness
@@ -123,21 +135,21 @@ data Trail
 mapTrail :: (Witness -> Witness) -> (Trail -> Trail) -> (Type -> Type) -> Trail -> Trail
 mapTrail witFunc _ _ (RTrail rWit) =
   RTrail $ witFunc rWit
-mapTrail witFunc trailFunc _ (TTrail trail1 trail2) =
+mapTrail _ trailFunc _ (TTrail trail1 trail2) =
   TTrail (trailFunc trail1) (trailFunc trail2)
-mapTrail witFunc trailFunc typeFunc (BaTrail var varType argWit bodyWit) =
+mapTrail witFunc _ typeFunc (BaTrail var varType argWit bodyWit) =
   BaTrail var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
-mapTrail witFunc trailFunc typeFunc (BbTrail var varType argWit bodyWit) =
+mapTrail witFunc _ typeFunc (BbTrail var varType argWit bodyWit) =
   BbTrail var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
 mapTrail witFunc trailFunc _ (TiTrail trail branchWits) =
   TiTrail (trailFunc trail) (fmap witFunc branchWits)
-mapTrail witFunc trailFunc typeFunc (LamTrail var varType lamTrail) =
+mapTrail _ trailFunc typeFunc (LamTrail var varType lamTrail) =
   LamTrail var (typeFunc varType) (trailFunc lamTrail)
-mapTrail witFunc trailFunc _ (AppTrail lamTrail argTrail) =
+mapTrail _ trailFunc _ (AppTrail lamTrail argTrail) =
   AppTrail (trailFunc lamTrail) (trailFunc argTrail)
-mapTrail witFunc trailFunc typeFunc (LetTrail var varType argTrail bodyTrail) =
+mapTrail _ trailFunc typeFunc (LetTrail var varType argTrail bodyTrail) =
   LetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
-mapTrail witFunc trailFunc _ (TrplTrail branchTrails) =
+mapTrail _ trailFunc _ (TrplTrail branchTrails) =
   TrplTrail $ fmap trailFunc branchTrails
 
 (<-->) :: Trail -> Trail -> Trail
@@ -158,7 +170,7 @@ instance Pretty Trail where
     <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint argWit <> text ","
     <+> pPrint bodyWit
     <> text ")"
-  pPrint (TiTrail trail (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
+  pPrint (TiTrail _ (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
     text "ti("
       <> pPrint rWit <> text ","
       <+> pPrint tWit <> text ","
@@ -211,7 +223,8 @@ data Exp
   | Inspect (TrailBranches Exp)
   deriving (Eq, Show)
 
-mapExp f (Brack exp) = f exp
+mapExp :: (Exp -> Exp) -> Exp -> Exp
+mapExp f (Brack brackExp) = f brackExp
 mapExp f (Lam var varType bodyExp) =
   Lam var varType (f bodyExp)
 mapExp f (App lamExp argExp) =
@@ -222,7 +235,7 @@ mapExp f (Let var varType argExp bodyExp) =
   Let var varType (f argExp) (f bodyExp)
 mapExp f (Inspect branches) =
   Inspect $ fmap f branches
-mapExp f otherExp = otherExp
+mapExp _ otherExp = otherExp
 
 data Value
   = IntVal Int

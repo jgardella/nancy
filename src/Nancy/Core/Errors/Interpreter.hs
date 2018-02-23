@@ -11,7 +11,6 @@ data InterpreterE
   | ExpectedLam Value
   | ValidityVarUndefined String
   | ExpectedBang Value
-  | InvalidTrailRename String
   | BadTrailValue
   deriving (Eq, Show)
 

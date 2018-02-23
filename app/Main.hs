@@ -3,10 +3,6 @@ module Main(main) where
 import Options.Applicative
 import Data.Function((&))
 import Data.Semigroup((<>))
-import Nancy.Parser( parseProgram )
-import System.Environment ( getArgs )
-import Nancy.Typechecker
-import Nancy.Interpreter
 import Nancy.Helper
 import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
@@ -56,7 +52,7 @@ main = do
   args <- execParser opts
   let input = case fileName args of
                 "<stdin>" -> getContents
-                fileName -> readFile fileName
+                file -> readFile file
   case mode args of
     Parse -> do
       result <- fmap (parse $ fileName args) input

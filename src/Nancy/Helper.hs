@@ -7,7 +7,6 @@ import Nancy.Core.Env as Env
 import Nancy.Core.Language
 import Nancy.Core.Util
 import Nancy.Core.Errors
-import Nancy.Core.Errors.Typechecker
 
 parse :: FilePath -> String -> Either NancyError Program
 parse source input =

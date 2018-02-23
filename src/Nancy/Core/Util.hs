@@ -1,15 +1,6 @@
 module Nancy.Core.Util where
 
 import Nancy.Core.Language as L
-import Nancy.Core.Errors.Interpreter as Err
-import Nancy.Core.Env
-import qualified Data.Map as Map
-import Data.List
-import Control.Monad.Identity
-import Control.Monad.Except
-import Control.Monad.Reader
-import Control.Monad.Writer
-import Control.Monad.State
 
 allEqual :: Eq a => [a] -> Bool
 allEqual [] = True
@@ -34,6 +25,7 @@ witSubOverAVarOnWit u w same@(L.AVarWit var)
 witSubOverAVarOnWit u w otherWit =
   mapWitness id (witSubOverAVarOnWit u w) otherWit
 
+witSubOverAVarOnTrail :: String -> L.Witness -> L.Trail -> L.Trail
 witSubOverAVarOnTrail u w =
   mapTrail
     (witSubOverAVarOnWit u w)
@@ -52,12 +44,12 @@ valueSubOverVar :: L.Value -> String -> L.Exp -> L.Exp
 valueSubOverVar value var same@(L.Var x)
   | x == var = valueToExp value
   | x /= var = same
-valueSubOverVar value var same@L.Bang{} = same
+valueSubOverVar _ _ same@L.Bang{} = same
 valueSubOverVar value var otherExp =
   mapExp (valueSubOverVar value var) otherExp
 
 termSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Exp -> L.Exp
-termSubOverAVar trail var val _ same@(L.AVar u)
+termSubOverAVar _ var val _ same@(L.AVar u)
   | u == var = valueToExp val
   | u /= var = same
 termSubOverAVar trail var val wit (L.Bang bangExp bangTrail) =
@@ -66,14 +58,14 @@ termSubOverAVar trail var val wit otherExp =
   mapExp (termSubOverAVar trail var val wit) otherExp
 
 trailSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Exp -> L.Trail
-trailSubOverAVar trail var _ _ exp@(L.AVar u)
+trailSubOverAVar trail var _ _ exprr@(L.AVar u)
   | u == var = trail
-  | u /= var = L.RTrail $ getWit exp
+  | u /= var = L.RTrail $ getWit exprr
 trailSubOverAVar trail var val wit (L.Lam arg argType argExp) =
   L.LamTrail arg argType (trailSubOverAVar trail var val wit argExp)
 trailSubOverAVar trail var val wit (L.App lamExp argExp) =
   L.AppTrail (trailSubOverAVar trail var val wit lamExp) (trailSubOverAVar trail var val wit argExp)
-trailSubOverAVar trail var val wit (L.Bang bangExp bangTrail) =
+trailSubOverAVar _ var _ wit (L.Bang _ bangTrail) =
   L.RTrail $ L.BangWit $ witSubOverAVarOnWit var wit (getSource bangTrail)
 trailSubOverAVar trail var val wit (L.Let letVar letVarType argExp bodyExp) =
   L.LetTrail letVar letVarType (trailSubOverAVar trail var val wit argExp) (trailSubOverAVar trail var val wit bodyExp)
@@ -104,10 +96,10 @@ getSource (L.TrplTrail branches) =
 
 getTarget :: L.Trail -> L.Witness
 getTarget (L.RTrail s) = s
-getTarget (L.TTrail trail1 trail2) = getTarget trail2
-getTarget (L.BaTrail var varType bodyWit argWit) =
+getTarget (L.TTrail _ trail2) = getTarget trail2
+getTarget (L.BaTrail var _ bodyWit argWit) =
   witSubOverVar var argWit bodyWit
-getTarget (L.BbTrail var varType argWit bodyWit) =
+getTarget (L.BbTrail var _ argWit bodyWit) =
   witSubOverAVarOnWit var argWit bodyWit
 getTarget (L.TiTrail trail branches) =
   foldTrailToWit branches trail
@@ -125,8 +117,8 @@ getWit (L.Number n) =
   L.IntWit n
 getWit (L.Boolean b) =
   L.BoolWit b
-getWit (L.Brack exp) =
-  getWit exp
+getWit (L.Brack expr) =
+  getWit expr
 getWit (L.Var x) =
   L.VarWit x
 getWit (L.AVar u) =
@@ -135,7 +127,7 @@ getWit (L.Lam arg argType body) =
   L.LamWit arg argType (getWit body)
 getWit (L.App lam arg) =
   L.AppWit (getWit lam) (getWit arg)
-getWit (L.Bang exp trail) =
+getWit (L.Bang _ trail) =
   L.BangWit (getSource trail)
 getWit (L.Let u typ arg body) =
   L.LetWit u typ (getWit arg) (getWit body)
@@ -143,38 +135,39 @@ getWit (L.Inspect branches) =
   L.TiWit $ fmap getWit branches
 
 foldTrailToTerm :: L.TrailBranches L.Exp -> L.Trail -> L.Exp
-foldTrailToTerm L.TrailBranches{rB=exp} (L.RTrail _) =
-  exp
-foldTrailToTerm branches@L.TrailBranches{tB=exp} (L.TTrail t1 t2) =
+foldTrailToTerm L.TrailBranches{rB=expr} (L.RTrail _) =
+  expr
+foldTrailToTerm branches@L.TrailBranches{tB=expr} (L.TTrail t1 t2) =
   L.App
     (L.App
-     exp
+     expr
      (foldTrailToTerm branches t1))
     (foldTrailToTerm branches t2)
-foldTrailToTerm L.TrailBranches{baB=exp} L.BaTrail{} =
-  exp
-foldTrailToTerm L.TrailBranches{bbB=exp} L.BbTrail{} =
-  exp
-foldTrailToTerm L.TrailBranches{tiB=exp} L.TiTrail{} =
-  exp
-foldTrailToTerm branches@L.TrailBranches{lamB=exp} (L.LamTrail _ _ bodyTrail) =
-  L.App exp (foldTrailToTerm branches bodyTrail)
-foldTrailToTerm branches@ L.TrailBranches{appB=exp} (L.AppTrail lamTrail bodyTrail) =
+foldTrailToTerm L.TrailBranches{baB=expr} L.BaTrail{} =
+  expr
+foldTrailToTerm L.TrailBranches{bbB=expr} L.BbTrail{} =
+  expr
+foldTrailToTerm L.TrailBranches{tiB=expr} L.TiTrail{} =
+  expr
+foldTrailToTerm branches@L.TrailBranches{lamB=expr} (L.LamTrail _ _ bodyTrail) =
+  L.App expr (foldTrailToTerm branches bodyTrail)
+foldTrailToTerm branches@ L.TrailBranches{appB=expr} (L.AppTrail lamTrail bodyTrail) =
   L.App
     (L.App
-     exp
+     expr
      (foldTrailToTerm branches lamTrail))
     (foldTrailToTerm branches bodyTrail)
-foldTrailToTerm branches@L.TrailBranches{letB=exp} (L.LetTrail _ _ argTrail bodyTrail) =
+foldTrailToTerm branches@L.TrailBranches{letB=expr} (L.LetTrail _ _ argTrail bodyTrail) =
   L.App
     (L.App
-     exp
+     expr
      (foldTrailToTerm branches argTrail))
     (foldTrailToTerm branches bodyTrail)
-foldTrailToTerm foldBranches@L.TrailBranches{trplB=exp}
+foldTrailToTerm foldBranches@L.TrailBranches{trplB=expr}
   (L.TrplTrail trailBranches) =
-    foldHelper exp (trailBranchesToList trailBranches)
+    foldHelper expr (trailBranchesToList trailBranches)
   where
+    foldHelper v [] = v
     foldHelper v [x] =
       L.App
         v
@@ -217,6 +210,7 @@ foldTrailToWit foldBranches@L.TrailBranches{trplB=wit}
   (L.TrplTrail trailBranches) =
     foldHelper wit (trailBranchesToList trailBranches)
   where
+    foldHelper v [] = v
     foldHelper v [x] =
       L.AppWit
         v

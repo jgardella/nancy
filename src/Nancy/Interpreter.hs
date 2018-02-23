@@ -1,17 +1,14 @@
 module Nancy.Interpreter where
 
 import Nancy.Core.Language as L
-import Text.Printf
 import Data.Either.Combinators
 import Nancy.Core.Util
-import Nancy.Core.Env as E
 import Nancy.Core.Errors
 import Nancy.Core.Errors.Interpreter as Err
 import Control.Monad.Identity
 import Control.Monad.Except
 import Control.Monad.Reader
 import Control.Monad.Writer
-import Control.Monad.State
 
 type InterpretEnv = Trail
 
@@ -21,15 +18,15 @@ runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePai
 runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 
 interpretProgram :: Program -> (Either NancyError Value, [String])
-interpretProgram (Program exp) =
+interpretProgram (Program expr) =
   processResult
   $ runInterpretM unusedInitialTrail (interpretExpression bangWrappedExp)
   where
     unusedInitialTrail = L.RTrail $ L.IntWit 0
     bangWrappedExp =
-      case exp of
-        (Bang _ _) -> exp
-        nonBangExp -> Bang nonBangExp (L.RTrail (getWit nonBangExp))
+      case expr of
+        (Bang _ _) -> expr
+        nonBangExpr -> Bang nonBangExpr (L.RTrail (getWit nonBangExpr))
     processResult (result, logs) =
       (mapBoth InterpretErr fst result, logs)
 
@@ -38,16 +35,15 @@ interpretExpression (Number n) =
   return (IntVal n, L.RTrail $ L.IntWit n)
 interpretExpression (Boolean b) =
   return (BoolVal b, L.RTrail $ L.BoolWit b)
-interpretExpression (Brack exp) =
-  interpretExpression exp
+interpretExpression (Brack expr) =
+  interpretExpression expr
 interpretExpression (Var x) =
   return (VarVal x, L.RTrail $ L.VarWit x)
-interpretExpression exp@(AVar u) =
+interpretExpression (AVar u) =
   return (AVarVal u, L.RTrail $ L.AVarWit u)
-interpretExpression exp@(Lam arg argType body) =
-  return (LamVal arg argType body, L.RTrail $ getWit exp)
+interpretExpression expr@(Lam arg argType body) =
+  return (LamVal arg argType body, L.RTrail $ getWit expr)
 interpretExpression (App lam arg) = do
-  currentTrail <- ask
   (lamVal, lamTrail) <- interpretExpression lam
   case lamVal of
     (LamVal var varType body) -> do
@@ -59,8 +55,8 @@ interpretExpression (App lam arg) = do
     _ ->
       throwError (Err.ExpectedLam lamVal)
   where
-    updateTrailForArg lamTrail arg currentTrail =
-      currentTrail <--> L.AppTrail lamTrail (L.RTrail $ getWit arg)
+    updateTrailForArg lamTrail lamArg currentTrail =
+      currentTrail <--> L.AppTrail lamTrail (L.RTrail $ getWit lamArg)
     updateTrailForBody lamTrail argTrail var varType currentTrail =
       currentTrail
       <--> L.AppTrail lamTrail argTrail
@@ -69,33 +65,31 @@ interpretExpression (App lam arg) = do
       L.AppTrail lamTrail argTrail
       <--> L.BaTrail var varType (getTarget lamTrail) (getTarget argTrail)
       <--> resultTrail
-interpretExpression exp@(Bang body bangTrail) = do
-  currentTrail <- ask
+interpretExpression expr@(Bang body bangTrail) = do
   (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
-  return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit exp)
-interpretExpression (Let var varType arg body) = do
-  currentTrail <- ask
-  (argValue, argTrail) <- interpretExpression arg
+  return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit expr)
+interpretExpression (Let letVar letVarType letArg letBody) = do
+  (argValue, argTrail) <- interpretExpression letArg
   case argValue of
     (L.BangVal bangVal bangTrail) -> do
       (resultVal, resultTrail) <-
-        local (updateTrailForBody argTrail bangTrail bangVal body var varType)
-          (interpretExpression (termSubOverAVar bangTrail var bangVal (getSource bangTrail) body))
-      return (resultVal, getReturnTrail argTrail bangTrail bangVal body var varType resultTrail)
+        local (updateTrailForBody argTrail bangTrail bangVal)
+          (interpretExpression (termSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody))
+      return (resultVal, getReturnTrail argTrail bangTrail bangVal resultTrail)
     _ -> throwError (Err.ExpectedBang argValue)
   where
-    updateTrailForBody argTrail bangTrail bangVal body var varType currentTrail =
+    updateTrailForBody argTrail bangTrail bangVal currentTrail =
       currentTrail
-      <--> L.LetTrail var varType argTrail (L.RTrail $ getWit body)
-      <--> L.BbTrail var varType (getSource bangTrail) (getWit body)
-      <--> trailSubOverAVar bangTrail var bangVal (getSource bangTrail) body
-    getReturnTrail argTrail bangTrail bangVal body var varType resultTrail =
-      L.LetTrail var varType argTrail (L.RTrail $ getWit body)
-      <--> L.BbTrail var varType (getSource bangTrail) (getWit body)
-      <--> trailSubOverAVar bangTrail var bangVal (getSource bangTrail) body
+      <--> L.LetTrail letVar letVarType argTrail (L.RTrail $ getWit letBody)
+      <--> L.BbTrail letVar letVarType (getSource bangTrail) (getWit letBody)
+      <--> trailSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody
+    getReturnTrail argTrail bangTrail bangVal resultTrail =
+      L.LetTrail letVar letVarType argTrail (L.RTrail $ getWit letBody)
+      <--> L.BbTrail letVar letVarType (getSource bangTrail) (getWit letBody)
+      <--> trailSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody
       <--> resultTrail
 interpretExpression
-  inspect@(Inspect
+  (Inspect
     branches@(TrailBranches
       rExp
       tExp
