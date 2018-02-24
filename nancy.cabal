@@ -40,7 +40,8 @@ library
     pretty,
     mtl
   build-tools:
-    alex, happy
+    alex,
+    happy
   default-language:
     Haskell2010
 
