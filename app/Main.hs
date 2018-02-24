@@ -4,7 +4,7 @@ import Options.Applicative
 import Data.Semigroup((<>))
 import Control.Monad(unless)
 import System.IO
-import Nancy.Helper
+import Nancy
 import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
 data Mode = Parse

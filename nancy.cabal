@@ -20,11 +20,12 @@ library
   hs-source-dirs:
     src
   exposed-modules:
-    Nancy.Typechecker,
-    Nancy.Interpreter,
+    Nancy
+  other-modules:
     Nancy.Parser,
     Nancy.Lexer,
-    Nancy.Helper,
+    Nancy.Typechecker,
+    Nancy.Interpreter,
     Nancy.Core.Env,
     Nancy.Core.Language,
     Nancy.Core.Util,

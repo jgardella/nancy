@@ -1,4 +1,4 @@
-module Nancy.Helper where
+module Nancy where
 
 import Nancy.Parser( parseProgram )
 import Nancy.Typechecker
