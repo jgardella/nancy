@@ -12,7 +12,7 @@ data ParserOutput
   deriving (Eq, Show)
 
 data TypecheckerOutput
-  = TypecheckSuccess TypePair
+  = TypecheckSuccess (Type, Witness)
   | TypecheckFailure TypecheckError
   deriving (Eq, Show)
 

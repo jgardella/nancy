@@ -11,9 +11,9 @@ import Control.Monad.Writer
 
 type InterpretEnv = Trail
 
-type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpretError (WriterT [String] Identity)) ValuePair
+type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpretError (WriterT [String] Identity)) (Value, Trail)
 
-runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpretError ValuePair, [String])
+runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpretError (Value, Trail), [String])
 runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 
 interpretProgram :: Program -> InterpreterOutput
@@ -27,7 +27,7 @@ interpretProgram (Program expr) =
         (Right (value, _)) -> InterpretSuccess (value, logs)
         (Left err) -> InterpretFailure (err, logs)
 
-interpretExpression :: Exp -> InterpretM
+interpretExpression :: Expr -> InterpretM
 interpretExpression (Number n) =
   return (IntVal n, L.RTrail $ L.IntWit n)
 interpretExpression (Boolean b) =
@@ -88,29 +88,29 @@ interpretExpression (Let letVar letVarType letArg letBody) = do
 interpretExpression
   (Inspect
     branches@(TrailBranches
-      rExp
-      tExp
-      baExp
-      bbExp
-      tiExp
-      lamExp
-      appExp
-      letExp
-      trplExp
+      rExpr
+      tExpr
+      baExpr
+      bbExpr
+      tiExpr
+      lamExpr
+      appExpr
+      letExpr
+      trplExpr
     )) = do
   currentTrail <- ask
-  (rValue, rTrail) <- interpretExpression rExp
-  (tValue, tTrail) <- local (updateTrailForT rTrail) (interpretExpression tExp)
-  (baValue, baTrail) <- local (updateTrailForBa rTrail tTrail) (interpretExpression baExp)
-  (bbValue, bbTrail) <- local (updateTrailForBb rTrail tTrail baTrail) (interpretExpression bbExp)
-  (tiValue, tiTrail) <- local (updateTrailForTi rTrail tTrail baTrail bbTrail) (interpretExpression tiExp)
-  (lamValue, lamTrail) <- local (updateTrailForLam rTrail tTrail baTrail bbTrail tiTrail) (interpretExpression lamExp)
-  (appValue, appTrail) <- local (updateTrailForApp rTrail tTrail baTrail bbTrail tiTrail lamTrail) (interpretExpression appExp)
-  (letValue, letTrail) <- local (updateTrailForLet rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail) (interpretExpression letExp)
-  (trplValue, trplTrail) <- local (updateTrailForTrpl rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail) (interpretExpression trplExp)
+  (rValue, rTrail) <- interpretExpression rExpr
+  (tValue, tTrail) <- local (updateTrailForT rTrail) (interpretExpression tExpr)
+  (baValue, baTrail) <- local (updateTrailForBa rTrail tTrail) (interpretExpression baExpr)
+  (bbValue, bbTrail) <- local (updateTrailForBb rTrail tTrail baTrail) (interpretExpression bbExpr)
+  (tiValue, tiTrail) <- local (updateTrailForTi rTrail tTrail baTrail bbTrail) (interpretExpression tiExpr)
+  (lamValue, lamTrail) <- local (updateTrailForLam rTrail tTrail baTrail bbTrail tiTrail) (interpretExpression lamExpr)
+  (appValue, appTrail) <- local (updateTrailForApp rTrail tTrail baTrail bbTrail tiTrail lamTrail) (interpretExpression appExpr)
+  (letValue, letTrail) <- local (updateTrailForLet rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail) (interpretExpression letExpr)
+  (trplValue, trplTrail) <- local (updateTrailForTrpl rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail) (interpretExpression trplExpr)
   let
     foldBranchExps =
-      valueToExp
+      valueToExpr
       <$> TrailBranches {
         rB = rValue,
         tB = tValue,
@@ -121,12 +121,12 @@ interpretExpression
         appB = appValue,
         letB = letValue,
         trplB = trplValue }
-    foldExp =
+    foldExpr =
       foldTrailToTerm foldBranchExps
         (updateTrailForFold rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail currentTrail)
   (foldValue, foldTrail) <-
     local (updateTrailForFold rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail)
-          (interpretExpression foldExp)
+          (interpretExpression foldExpr)
   return (foldValue, getResultTrail rTrail tTrail baTrail bbTrail tiTrail lamTrail appTrail letTrail trplTrail foldTrail currentTrail)
   where
     base = fmap (L.RTrail . getWit) branches

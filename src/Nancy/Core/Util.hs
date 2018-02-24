@@ -32,43 +32,43 @@ witSubOverAVarOnTrail u w =
     (witSubOverAVarOnTrail u w)
     (witSubOverAVarOnType u w)
 
-valueToExp :: L.Value -> L.Exp
-valueToExp (L.IntVal n) = L.Number n
-valueToExp (L.BoolVal b) = L.Boolean b
-valueToExp (L.VarVal x) = L.Var x
-valueToExp (L.AVarVal x) = L.AVar x
-valueToExp (L.LamVal arg argType body) = L.Lam arg argType body
-valueToExp (L.BangVal bodyVal trail) = L.Bang (valueToExp bodyVal) trail
+valueToExpr :: L.Value -> L.Expr
+valueToExpr (L.IntVal n) = L.Number n
+valueToExpr (L.BoolVal b) = L.Boolean b
+valueToExpr (L.VarVal x) = L.Var x
+valueToExpr (L.AVarVal x) = L.AVar x
+valueToExpr (L.LamVal arg argType body) = L.Lam arg argType body
+valueToExpr (L.BangVal bodyVal trail) = L.Bang (valueToExpr bodyVal) trail
 
-valueSubOverVar :: L.Value -> String -> L.Exp -> L.Exp
+valueSubOverVar :: L.Value -> String -> L.Expr -> L.Expr
 valueSubOverVar value var same@(L.Var x)
-  | x == var = valueToExp value
+  | x == var = valueToExpr value
   | x /= var = same
 valueSubOverVar _ _ same@L.Bang{} = same
-valueSubOverVar value var otherExp =
-  mapExp (valueSubOverVar value var) otherExp
+valueSubOverVar value var otherExpr =
+  mapExpr (valueSubOverVar value var) otherExpr
 
-termSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Exp -> L.Exp
+termSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Expr -> L.Expr
 termSubOverAVar _ var val _ same@(L.AVar u)
-  | u == var = valueToExp val
+  | u == var = valueToExpr val
   | u /= var = same
-termSubOverAVar trail var val wit (L.Bang bangExp bangTrail) =
-  L.Bang (termSubOverAVar trail var val wit bangExp) (witSubOverAVarOnTrail var wit bangTrail <--> trailSubOverAVar trail var val wit bangExp)
-termSubOverAVar trail var val wit otherExp =
-  mapExp (termSubOverAVar trail var val wit) otherExp
+termSubOverAVar trail var val wit (L.Bang bangExpr bangTrail) =
+  L.Bang (termSubOverAVar trail var val wit bangExpr) (witSubOverAVarOnTrail var wit bangTrail <--> trailSubOverAVar trail var val wit bangExpr)
+termSubOverAVar trail var val wit otherExpr =
+  mapExpr (termSubOverAVar trail var val wit) otherExpr
 
-trailSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Exp -> L.Trail
-trailSubOverAVar trail var _ _ exprr@(L.AVar u)
+trailSubOverAVar :: L.Trail -> String -> L.Value -> L.Witness -> L.Expr -> L.Trail
+trailSubOverAVar trail var _ _ expr@(L.AVar u)
   | u == var = trail
-  | u /= var = L.RTrail $ getWit exprr
-trailSubOverAVar trail var val wit (L.Lam arg argType argExp) =
-  L.LamTrail arg argType (trailSubOverAVar trail var val wit argExp)
-trailSubOverAVar trail var val wit (L.App lamExp argExp) =
-  L.AppTrail (trailSubOverAVar trail var val wit lamExp) (trailSubOverAVar trail var val wit argExp)
+  | u /= var = L.RTrail $ getWit expr
+trailSubOverAVar trail var val wit (L.Lam arg argType argExpr) =
+  L.LamTrail arg argType (trailSubOverAVar trail var val wit argExpr)
+trailSubOverAVar trail var val wit (L.App lamExpr argExpr) =
+  L.AppTrail (trailSubOverAVar trail var val wit lamExpr) (trailSubOverAVar trail var val wit argExpr)
 trailSubOverAVar _ var _ wit (L.Bang _ bangTrail) =
   L.RTrail $ L.BangWit $ witSubOverAVarOnWit var wit (getSource bangTrail)
-trailSubOverAVar trail var val wit (L.Let letVar letVarType argExp bodyExp) =
-  L.LetTrail letVar letVarType (trailSubOverAVar trail var val wit argExp) (trailSubOverAVar trail var val wit bodyExp)
+trailSubOverAVar trail var val wit (L.Let letVar letVarType argExpr bodyExpr) =
+  L.LetTrail letVar letVarType (trailSubOverAVar trail var val wit argExpr) (trailSubOverAVar trail var val wit bodyExpr)
 trailSubOverAVar trail var val wit (L.Inspect branches) =
   L.TrplTrail $ fmap (trailSubOverAVar trail var val wit) branches
 trailSubOverAVar _ _ _ _ other =
@@ -112,7 +112,7 @@ getTarget (L.LetTrail var varType argTrail bodyTrail) =
 getTarget (L.TrplTrail branches) =
   L.TiWit $ fmap getTarget branches
 
-getWit :: L.Exp -> L.Witness
+getWit :: L.Expr -> L.Witness
 getWit (L.Number n) =
   L.IntWit n
 getWit (L.Boolean b) =
@@ -134,7 +134,7 @@ getWit (L.Let u typ arg body) =
 getWit (L.Inspect branches) =
   L.TiWit $ fmap getWit branches
 
-foldTrailToTerm :: L.TrailBranches L.Exp -> L.Trail -> L.Exp
+foldTrailToTerm :: L.TrailBranches L.Expr -> L.Trail -> L.Expr
 foldTrailToTerm L.TrailBranches{rB=expr} (L.RTrail _) =
   expr
 foldTrailToTerm branches@L.TrailBranches{tB=expr} (L.TTrail t1 t2) =

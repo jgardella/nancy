@@ -11,9 +11,9 @@ import Control.Monad.Reader
 
 type TypecheckEnv = (Env L.Type, Env L.Type)
 
-type TypecheckM = ReaderT TypecheckEnv (ExceptT Err.TypecheckError Identity) TypePair
+type TypecheckM = ReaderT TypecheckEnv (ExceptT Err.TypecheckError Identity) (Type, Witness)
 
-runTypecheckM :: TypecheckEnv -> TypecheckM -> Either Err.TypecheckError TypePair
+runTypecheckM :: TypecheckEnv -> TypecheckM -> Either Err.TypecheckError (Type, Witness)
 runTypecheckM env m = runIdentity (runExceptT (runReaderT m env))
 
 updateTruthEnv :: (Env L.Type -> Env L.Type) -> TypecheckEnv -> TypecheckEnv
@@ -30,7 +30,7 @@ typecheckProgram env (Program expr) =
     (Right typePair) -> TypecheckSuccess typePair
     (Left err) -> TypecheckFailure err
 
-typecheckExpression :: Exp -> TypecheckM
+typecheckExpression :: Expr -> TypecheckM
 typecheckExpression (Number n) =
   return (L.IntType, L.IntWit n)
 typecheckExpression (Boolean b) =
@@ -73,26 +73,26 @@ typecheckExpression (Let u uType arg body) = do
 typecheckExpression
   inspectExpr@(Inspect
    (TrailBranches
-    rExp
-    tExp
-    baExp
-    bbExp
-    tiExp
-    lamExp
-    appExp
-    letExp
-    trplExp
+    rExpr
+    tExpr
+    baExpr
+    bbExpr
+    tiExpr
+    lamExpr
+    appExpr
+    letExpr
+    trplExpr
   ))
     = do
-  (rType, rWit) <- local keepWitEnv (typecheckExpression rExp)
-  (tType, tWit) <- local keepWitEnv (typecheckExpression tExp)
-  (baType, baWit) <- local keepWitEnv (typecheckExpression baExp)
-  (bbType, bbWit) <- local keepWitEnv (typecheckExpression bbExp)
-  (tiType, tiWit) <- local keepWitEnv (typecheckExpression tiExp)
-  (lamType, lamWit) <- local keepWitEnv (typecheckExpression lamExp)
-  (appType, appWit) <- local keepWitEnv (typecheckExpression appExp)
-  (letType, letWit) <- local keepWitEnv (typecheckExpression letExp)
-  (trplType, trplWit) <- local keepWitEnv (typecheckExpression trplExp)
+  (rType, rWit) <- local keepWitEnv (typecheckExpression rExpr)
+  (tType, tWit) <- local keepWitEnv (typecheckExpression tExpr)
+  (baType, baWit) <- local keepWitEnv (typecheckExpression baExpr)
+  (bbType, bbWit) <- local keepWitEnv (typecheckExpression bbExpr)
+  (tiType, tiWit) <- local keepWitEnv (typecheckExpression tiExpr)
+  (lamType, lamWit) <- local keepWitEnv (typecheckExpression lamExpr)
+  (appType, appWit) <- local keepWitEnv (typecheckExpression appExpr)
+  (letType, letWit) <- local keepWitEnv (typecheckExpression letExpr)
+  (trplType, trplWit) <- local keepWitEnv (typecheckExpression trplExpr)
   if allEqual [rType, baType, bbType, tiType]
     && lamType == createLamType rType 1
     && tType == createLamType rType 2

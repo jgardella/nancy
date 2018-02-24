@@ -8,10 +8,10 @@ data TypecheckError
   = TruthVarUndefined String
   | InvalidArgType Type Type
   | InvalidLetArgType Type Type
-  | ExpectedLam Exp Type
+  | ExpectedLam Expr Type
   | ValidityVarUndefined String
   | ExpectedBang Type
-  | BadInspectBranch Exp
+  | BadInspectBranch Expr
   | PreTypecheckError String
   deriving (Eq, Show)
 
@@ -22,8 +22,8 @@ instance Pretty TypecheckError where
     text "Function expects type" <+> pPrint expectedType <> text ", but given type" <+> pPrint givenType
   pPrint (InvalidLetArgType givenType expectedType) =
     text "Let expects type" <+> pPrint expectedType <> text ", but given type" <+> pPrint givenType
-  pPrint (ExpectedLam leftExp leftType) =
-    text "Left expresion of App" <+> text (show leftExp) <+> text "has type" <+> pPrint leftType <>
+  pPrint (ExpectedLam leftExpr leftType) =
+    text "Left expresion of App" <+> text (show leftExpr) <+> text "has type" <+> pPrint leftType <>
       text ", but should have type LamType"
   pPrint (ValidityVarUndefined vVar) =
     text "Validity variable" <+> text vVar <+> text "is not defined"
