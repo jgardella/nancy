@@ -15,18 +15,21 @@ parse source input =
     (Right (Program nonBangExp)) -> Right (Program (Bang nonBangExp (RTrail (getWit nonBangExp))))
     (Left e) -> Left $ ParserErr e
 
-parseAndTypecheck :: FilePath -> String -> Either NancyError TypePair
-parseAndTypecheck source input =
-  parseAndTypecheckWithEnv source input (Env.empty, Env.empty)
+parseTypecheck :: FilePath -> String -> Either NancyError TypePair
+parseTypecheck source input =
+  parseTypecheckWithEnv source input (Env.empty, Env.empty)
 
-parseAndTypecheckWithEnv :: FilePath -> String -> TypecheckEnv -> Either NancyError TypePair
-parseAndTypecheckWithEnv source input env = do
+parseTypecheckWithEnv :: FilePath -> String -> TypecheckEnv -> Either NancyError TypePair
+parseTypecheckWithEnv source input env = do
   parseResult <- parse source input
   typecheckProgram env parseResult
 
-parseAndInterpret :: FilePath -> String -> (Either NancyError Value, [String])
-parseAndInterpret source input =
+parseTypecheckInterpret :: FilePath -> String -> (Either NancyError Value, [String])
+parseTypecheckInterpret source input =
   case parse source input of
     Right parseResult ->
-      interpretProgram parseResult
+      case typecheckProgram (Env.empty, Env.empty) parseResult of
+        Right _ ->
+          interpretProgram parseResult
+        Left err -> (Left err, [])
     Left err -> (Left err, [])

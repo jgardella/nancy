@@ -21,7 +21,7 @@ parseMode = option auto
             ( long "mode"
             <> short 'm'
             <> metavar "MODE"
-            <> value Typecheck )
+            <> value Interpret )
 
 parsePretty :: Parser Bool
 parsePretty = switch
@@ -37,8 +37,8 @@ parseArgs = Args
 opts :: ParserInfo Args
 opts = info (parseArgs <**> helper)
   ( fullDesc
- <> progDesc "Interpreter for Audited Computation Language"
- <> header "Audited Computation Language Interpreter" )
+ <> progDesc "Interpreter for Nancy Programming Language"
+ <> header "Nancy Interpreter" )
 
 smartShow :: (Show a, Pretty a) => Args -> a -> String
 smartShow args a =
@@ -58,12 +58,12 @@ main = do
       result <- fmap (parse $ fileName args) input
       either (putStrLn . smartShow args) print result
     Typecheck -> do
-      typecheckResult <- fmap (parseAndTypecheck $ fileName args) input
+      typecheckResult <- fmap (parseTypecheck $ fileName args) input
       case typecheckResult of
         (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
         (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn
     Interpret -> do
-      (interpretResult, logs) <- fmap (parseAndInterpret $ fileName args) input
+      (interpretResult, logs) <- fmap (parseTypecheckInterpret $ fileName args) input
       mapM_ putStrLn logs
       case interpretResult of
         (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
