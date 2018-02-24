@@ -4,9 +4,8 @@ import Options.Applicative
 import Data.Semigroup((<>))
 import Control.Monad(unless)
 import System.IO
-import Nancy.Core.Output
 import Nancy.Helper
-import Text.PrettyPrint.HughesPJClass( prettyShow )
+import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
 data Mode = Parse
           | Typecheck
@@ -47,17 +46,17 @@ read' = putStr "#> "
      >> hFlush stdout
      >> getLine
 
-eval' :: Args -> String -> NancyOutput
-eval' args input =
+evalPrint' :: Args -> String -> IO ()
+evalPrint' args input =
   case mode args of
     Parse ->
-      parse (source args) input
+      print' args $ parse (source args) input
     Typecheck ->
-      parseTypecheck (source args) input
+      print' args $ parseTypecheck (source args) input
     Interpret ->
-      parseTypecheckInterpret (source args) input
+      print' args $ parseTypecheckInterpret (source args) input
 
-print' :: Args -> NancyOutput -> IO ()
+print' :: (Show a, Pretty a) => Args -> a -> IO ()
 print' args output =
   if pretty args then
     putStrLn $ prettyShow output
@@ -69,7 +68,7 @@ repl args = do
   input <- read'
 
   unless (input == ":quit")
-    $ print' args (eval' args input)
+    $ evalPrint' args input
    >> repl args
 
 main :: IO ()
@@ -79,4 +78,4 @@ main = do
     "<stdin>" -> repl args
     fileName -> do
       input <- readFile fileName
-      print' args $ eval' args input
+      evalPrint' args input

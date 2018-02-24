@@ -1,8 +1,8 @@
 module Nancy.Interpreter where
 
 import Nancy.Core.Language as L
-import Data.Either.Combinators
 import Nancy.Core.Util
+import Nancy.Core.Output
 import Nancy.Core.Errors.Interpreter as Err
 import Control.Monad.Identity
 import Control.Monad.Except
@@ -16,14 +16,16 @@ type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpretError (WriterT [Str
 runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpretError ValuePair, [String])
 runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 
-interpretProgram :: Program -> (Either Err.InterpretError Value, [String])
+interpretProgram :: Program -> InterpreterOutput
 interpretProgram (Program expr) =
   processResult
   $ runInterpretM unusedInitialTrail (interpretExpression expr)
   where
     unusedInitialTrail = L.RTrail $ L.IntWit 0
     processResult (result, logs) =
-      (mapRight fst result, logs)
+      case result of
+        (Right (value, _)) -> InterpretSuccess (value, logs)
+        (Left err) -> InterpretFailure (err, logs)
 
 interpretExpression :: Exp -> InterpretM
 interpretExpression (Number n) =

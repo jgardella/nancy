@@ -16,6 +16,7 @@ data TypecheckError
   | InconsistentTrailMappings
   | InvalidRenameDomain [String] [String]
   | InvalidRenameCodomain [String] [String]
+  | PreTypecheckError String
   deriving (Eq, Show)
 
 instance Pretty TypecheckError where
@@ -48,3 +49,5 @@ instance Pretty TypecheckError where
     vcat [ text "Codomain of trail renaming should match initial trail variables"
          , nest 2 (text "codomain:" <+> pPrint codomain)
          , nest 2 (text "initialTrailVars:" <+> pPrint initialTrailVars)]
+  pPrint (PreTypecheckError err) =
+    text err

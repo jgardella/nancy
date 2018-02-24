@@ -12,6 +12,7 @@ data InterpretError
   | ValidityVarUndefined String
   | ExpectedBang Value
   | BadTrailValue
+  | PreInterpretError String
   deriving (Eq, Show)
 
 instance Pretty InterpretError where
@@ -27,3 +28,5 @@ instance Pretty InterpretError where
     text "Expected Bang value, but got" <+> pPrint value
   pPrint BadTrailValue  =
     text "Bad trail value"
+  pPrint (PreInterpretError err) =
+    text err

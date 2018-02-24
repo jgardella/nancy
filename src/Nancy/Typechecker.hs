@@ -2,6 +2,7 @@ module Nancy.Typechecker where
 
 import Nancy.Core.Language as L
 import Nancy.Core.Env as E
+import Nancy.Core.Output
 import Nancy.Core.Errors.Typechecker as Err
 import Nancy.Core.Util
 import Control.Monad.Identity
@@ -23,9 +24,11 @@ updateWitnessEnv :: (Env L.Type -> Env L.Type) -> TypecheckEnv -> TypecheckEnv
 updateWitnessEnv f (tEnv, wEnv) =
   (tEnv, f wEnv)
 
-typecheckProgram :: TypecheckEnv -> Program -> Either Err.TypecheckError TypePair
+typecheckProgram :: TypecheckEnv -> Program -> TypecheckerOutput
 typecheckProgram env (Program expr) =
-  runTypecheckM env (typecheckExpression expr)
+  case runTypecheckM env (typecheckExpression expr) of
+    (Right typePair) -> TypecheckSuccess typePair
+    (Left err) -> TypecheckFailure err
 
 typecheckExpression :: Exp -> TypecheckM
 typecheckExpression (Number n) =
