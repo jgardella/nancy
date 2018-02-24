@@ -5,7 +5,6 @@ module Nancy.Parser( parseProgram ) where
 import Data.Char
 import Nancy.Lexer
 import Nancy.Core.Language
-import Nancy.Core.Errors
 import Nancy.Core.Util
 }
 

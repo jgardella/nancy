@@ -28,7 +28,7 @@ library
     Nancy.Core.Env,
     Nancy.Core.Language,
     Nancy.Core.Util,
-    Nancy.Core.Errors,
+    Nancy.Core.Output,
     Nancy.Core.Errors.Typechecker,
     Nancy.Core.Errors.Interpreter
   build-depends:

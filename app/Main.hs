@@ -1,12 +1,12 @@
 module Main(main) where
 
 import Options.Applicative
-import Data.Function((&))
 import Data.Semigroup((<>))
 import Control.Monad(unless)
 import System.IO
+import Nancy.Core.Output
 import Nancy.Helper
-import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
+import Text.PrettyPrint.HughesPJClass( prettyShow )
 
 data Mode = Parse
           | Typecheck
@@ -42,40 +42,35 @@ opts = info (parseArgs <**> helper)
  <> progDesc "Interpreter for Nancy Programming Language"
  <> header "Nancy Interpreter" )
 
-smartShow :: (Show a, Pretty a) => Args -> a -> String
-smartShow args a =
-  if pretty args then
-    prettyShow a
-  else
-    show a
-
 read' :: IO String
 read' = putStr "#> "
      >> hFlush stdout
      >> getLine
 
-eval :: Args -> String -> IO ()
-eval args input =
+eval' :: Args -> String -> NancyOutput
+eval' args input =
   case mode args of
     Parse ->
-      either (putStrLn . smartShow args) print (parse (source args) input)
+      parse (source args) input
     Typecheck ->
-      case parseTypecheck (source args) input of
-        (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
-        (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nWitness: \n" ++ smartShow args p) & putStrLn
-    Interpret -> do
-      let (interpretResult, logs) = parseTypecheckInterpret (source args) input
-      mapM_ putStrLn logs
-      case interpretResult of
-        (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
-        (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn
+      parseTypecheck (source args) input
+    Interpret ->
+      parseTypecheckInterpret (source args) input
+
+print' :: Args -> NancyOutput -> IO ()
+print' args output =
+  if pretty args then
+    putStrLn $ prettyShow output
+  else
+    print output
 
 repl :: Args -> IO ()
 repl args = do
   input <- read'
 
   unless (input == ":quit")
-    $ eval args input >> repl args
+    $ print' args (eval' args input)
+   >> repl args
 
 main :: IO ()
 main = do
@@ -84,4 +79,4 @@ main = do
     "<stdin>" -> repl args
     fileName -> do
       input <- readFile fileName
-      eval args input
+      print' args $ eval' args input

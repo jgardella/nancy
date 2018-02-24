@@ -5,7 +5,7 @@ import Nancy.Core.Env
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
-data InterpreterE
+data InterpretError
   = TruthVarUndefined String
   | TrailVarUndefined String (Env Trail)
   | ExpectedLam Value
@@ -14,7 +14,7 @@ data InterpreterE
   | BadTrailValue
   deriving (Eq, Show)
 
-instance Pretty InterpreterE where
+instance Pretty InterpretError where
   pPrint (TruthVarUndefined tVar) =
     text "Truth variable" <+> text tVar <+> text "is not defined"
   pPrint (TrailVarUndefined eVar env) =

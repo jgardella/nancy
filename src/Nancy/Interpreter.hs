@@ -3,7 +3,6 @@ module Nancy.Interpreter where
 import Nancy.Core.Language as L
 import Data.Either.Combinators
 import Nancy.Core.Util
-import Nancy.Core.Errors
 import Nancy.Core.Errors.Interpreter as Err
 import Control.Monad.Identity
 import Control.Monad.Except
@@ -12,19 +11,19 @@ import Control.Monad.Writer
 
 type InterpretEnv = Trail
 
-type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpreterE (WriterT [String] Identity)) ValuePair
+type InterpretM = ReaderT InterpretEnv (ExceptT Err.InterpretError (WriterT [String] Identity)) ValuePair
 
-runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpreterE ValuePair, [String])
+runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpretError ValuePair, [String])
 runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 
-interpretProgram :: Program -> (Either NancyError Value, [String])
+interpretProgram :: Program -> (Either Err.InterpretError Value, [String])
 interpretProgram (Program expr) =
   processResult
   $ runInterpretM unusedInitialTrail (interpretExpression expr)
   where
     unusedInitialTrail = L.RTrail $ L.IntWit 0
     processResult (result, logs) =
-      (mapBoth InterpretErr fst result, logs)
+      (mapRight fst result, logs)
 
 interpretExpression :: Exp -> InterpretM
 interpretExpression (Number n) =

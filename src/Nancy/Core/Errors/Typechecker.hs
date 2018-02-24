@@ -4,7 +4,7 @@ import Nancy.Core.Language
 import Text.PrettyPrint
 import Text.PrettyPrint.HughesPJClass
 
-data TypecheckerE
+data TypecheckError
   = TruthVarUndefined String
   | InvalidArgType Type Type
   | InvalidLetArgType Type Type
@@ -18,7 +18,7 @@ data TypecheckerE
   | InvalidRenameCodomain [String] [String]
   deriving (Eq, Show)
 
-instance Pretty TypecheckerE where
+instance Pretty TypecheckError where
   pPrint (TruthVarUndefined tVar) =
     text "Truth variable" <+> text tVar <+> text "is not defined"
   pPrint (InvalidArgType givenType expectedType) =

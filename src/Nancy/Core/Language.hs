@@ -71,6 +71,8 @@ instance Pretty Witness where
       <+> pPrint letWit <> text ","
       <+> pPrint trplWit <> text ")"
 
+type TypePair = (Type, Witness)
+
 data TrailBranches a = TrailBranches {
   rB :: a,
   tB :: a,
@@ -208,7 +210,7 @@ instance Pretty Trail where
       <+> pPrint trplTrl <> text ")"
 
 newtype Program = Program Exp
-  deriving Show
+  deriving (Eq, Show)
 
 data Exp
   = Var String
