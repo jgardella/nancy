@@ -20,13 +20,9 @@ runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 interpretProgram :: Program -> (Either NancyError Value, [String])
 interpretProgram (Program expr) =
   processResult
-  $ runInterpretM unusedInitialTrail (interpretExpression bangWrappedExp)
+  $ runInterpretM unusedInitialTrail (interpretExpression expr)
   where
     unusedInitialTrail = L.RTrail $ L.IntWit 0
-    bangWrappedExp =
-      case expr of
-        (Bang _ _) -> expr
-        nonBangExpr -> Bang nonBangExpr (L.RTrail (getWit nonBangExpr))
     processResult (result, logs) =
       (mapBoth InterpretErr fst result, logs)
 
