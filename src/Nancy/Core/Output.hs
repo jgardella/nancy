@@ -29,12 +29,12 @@ instance Pretty ParserOutput where
 
 instance Pretty TypecheckerOutput where
   pPrint (TypecheckSuccess (resultType, resultWit)) =
-    text "Type:\n" <> pPrint resultType <> text "\nWitness:\n" <> pPrint resultWit
+    pPrint resultType <+> brackets(pPrint resultWit)
   pPrint (TypecheckFailure err) =
     text "Error during typechecking:" <+> pPrint err
 
 instance Pretty InterpreterOutput where
   pPrint (InterpretSuccess (resultVal, _)) =
-    text "Value:\n" <> pPrint resultVal
+    pPrint resultVal
   pPrint (InterpretFailure (err, _)) =
     text "Error during interpreting:" <+> pPrint err

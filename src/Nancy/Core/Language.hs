@@ -21,7 +21,7 @@ instance Pretty Type where
   pPrint IntType = text "int"
   pPrint BoolType = text "bool"
   pPrint (LamType argType returnType) = pPrint argType <+> text "->" <+> pPrint returnType
-  pPrint (BangType bodyType witness) = text "[" <> pPrint witness <> text "]" <+> pPrint bodyType
+  pPrint (BangType bodyType witness) = pPrint bodyType <+> brackets(pPrint witness)
 
 data Witness
   = VarWit String
@@ -49,27 +49,27 @@ mapWitness typeFunc witFunc (TiWit branchWits) =
 mapWitness _ _ otherWitness = otherWitness
 
 instance Pretty Witness where
-  pPrint (VarWit var) = text "varwit(" <> text var <> text ")"
-  pPrint (IntWit intVal) = text "intwit(" <> text (show intVal) <> text ")"
-  pPrint (BoolWit boolVal) = text "boolwit(" <> text (show boolVal) <> text ")"
-  pPrint (LamWit arg argType bodyWit) = text "lamwit(" <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint bodyWit <> text ")"
-  pPrint (AppWit lamWit argWit) = text "appwit(" <> pPrint lamWit <> text ", " <> pPrint argWit <> text ")"
-  pPrint (AVarWit avar) = text "avarwit(" <> text avar <> text ")"
-  pPrint (BangWit bangWit) = text "bangwit(" <> pPrint bangWit <> text")"
+  pPrint (VarWit var) = text "varwit" <> parens(text var)
+  pPrint (IntWit intVal) = text "intwit" <> parens(text (show intVal))
+  pPrint (BoolWit boolVal) = text "boolwit" <> parens(text (show boolVal))
+  pPrint (LamWit arg argType bodyWit) = text "lamwit" <> parens(text arg <> colon <> pPrint argType <> comma <+> pPrint bodyWit)
+  pPrint (AppWit lamWit argWit) = text "appwit" <> parens(pPrint lamWit <> comma <> pPrint argWit)
+  pPrint (AVarWit avar) = text "avarwit" <> parens(text avar)
+  pPrint (BangWit bangWit) = text "bangwit" <> parens(pPrint bangWit)
   pPrint (LetWit arg argType argWit bodyWit) =
-    text "letwit(" <> text arg <> text ":" <> pPrint argType <> text ","
-      <+> pPrint argWit <> text "," <+> pPrint bodyWit <> text ")"
+    text "letwit" <> parens(text arg <> colon <> pPrint argType <> comma
+      <+> pPrint argWit <> comma <+> pPrint bodyWit)
   pPrint (TiWit (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
-    text "tiwit("
-      <> pPrint rWit <> text ","
-      <+> pPrint tWit <> text ","
-      <+> pPrint baWit <> text ","
-      <+> pPrint bbWit <> text ","
-      <+> pPrint tiWit <> text ","
-      <+> pPrint lamWit <> text ","
-      <+> pPrint appWit <> text ","
-      <+> pPrint letWit <> text ","
-      <+> pPrint trplWit <> text ")"
+    text "tiwit" <> parens(
+      pPrint rWit <> comma
+      <+> pPrint tWit <> comma
+      <+> pPrint baWit <> comma
+      <+> pPrint bbWit <> comma
+      <+> pPrint tiWit <> comma
+      <+> pPrint lamWit <> comma
+      <+> pPrint appWit <> comma
+      <+> pPrint letWit <> comma
+      <+> pPrint trplWit)
 
 type TypePair = (Type, Witness)
 
@@ -160,54 +160,49 @@ trailOne <--> trailTwo = TTrail trailOne trailTwo
 infixr 0 <-->
 
 instance Pretty Trail where
-  pPrint (RTrail wit) = text "r(" <> pPrint wit <> text ")"
-  pPrint (TTrail trail1 trail2) = pPrint trail1 <> text ";" <> pPrint trail2
+  pPrint (RTrail wit) = text "r" <> parens(pPrint wit)
+  pPrint (TTrail trail1 trail2) = pPrint trail1 <> semi <> pPrint trail2
   pPrint (BaTrail arg argType argWit bodyWit) =
-    text "ba("
-    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint argWit <> text ","
-    <+> pPrint bodyWit
-    <> text ")"
+    text "ba" <> parens(
+    text arg <> colon <> pPrint argType <> comma <+> pPrint argWit <> comma
+    <+> pPrint bodyWit)
   pPrint (BbTrail arg argType argWit bodyWit) =
-    text "bb("
-    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint argWit <> text ","
-    <+> pPrint bodyWit
-    <> text ")"
+    text "bb" <> parens(
+    text arg <> colon <> pPrint argType <> comma <+> pPrint argWit <> comma
+    <+> pPrint bodyWit)
   pPrint (TiTrail _ (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
-    text "ti("
-      <> pPrint rWit <> text ","
-      <+> pPrint tWit <> text ","
-      <+> pPrint baWit <> text ","
-      <+> pPrint bbWit <> text ","
-      <+> pPrint tiWit <> text ","
-      <+> pPrint lamWit <> text ","
-      <+> pPrint appWit <> text ","
-      <+> pPrint letWit <> text ","
-      <+> pPrint trplWit <> text ")"
+    text "ti" <> parens(
+      pPrint rWit <> comma
+      <+> pPrint tWit <> comma
+      <+> pPrint baWit <> comma
+      <+> pPrint bbWit <> comma
+      <+> pPrint tiWit <> comma
+      <+> pPrint lamWit <> comma
+      <+> pPrint appWit <> comma
+      <+> pPrint letWit <> comma
+      <+> pPrint trplWit)
   pPrint (LamTrail arg argType bodyTrail) =
-    text "lam("
-    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint bodyTrail
-    <> text ")"
+    text "lam" <> parens(
+    text arg <> colon <> pPrint argType <> comma <+> pPrint bodyTrail)
   pPrint (AppTrail lamTrail argTrail) =
-    text "app("
-    <> pPrint lamTrail <> text ","
-    <+> pPrint argTrail
-    <> text ")"
+    text "app" <> parens(
+    pPrint lamTrail <> comma
+    <+> pPrint argTrail)
   pPrint (LetTrail arg argType argTrail bodyTrail) =
-    text "let("
-    <> text arg <> text ":" <> pPrint argType <> text "," <+> pPrint argTrail <> text ","
-    <+> pPrint bodyTrail
-    <> text ")"
+    text "let" <> parens(
+    text arg <> colon <> pPrint argType <> comma <+> pPrint argTrail <> comma
+    <+> pPrint bodyTrail)
   pPrint (TrplTrail (TrailBranches rTrl tTrl baTrl bbTrl tiTrl lamTrl appTrl letTrl trplTrl)) =
-    text "trpl("
-      <> pPrint rTrl <> text ","
-      <+> pPrint tTrl <> text ","
-      <+> pPrint baTrl <> text ","
-      <+> pPrint bbTrl <> text ","
-      <+> pPrint tiTrl <> text ","
-      <+> pPrint lamTrl <> text ","
-      <+> pPrint appTrl <> text ","
-      <+> pPrint letTrl <> text ","
-      <+> pPrint trplTrl <> text ")"
+    text "trpl" <> parens(
+      pPrint rTrl <> comma
+      <+> pPrint tTrl <> comma
+      <+> pPrint baTrl <> comma
+      <+> pPrint bbTrl <> comma
+      <+> pPrint tiTrl <> comma
+      <+> pPrint lamTrl <> comma
+      <+> pPrint appTrl <> comma
+      <+> pPrint letTrl <> comma
+      <+> pPrint trplTrl)
 
 newtype Program = Program Exp
   deriving (Eq, Show)
@@ -251,9 +246,9 @@ data Value
 instance Pretty Value where
   pPrint (IntVal i) = int i
   pPrint (BoolVal b) = text $ show b
-  pPrint (LamVal arg typ body) = text "(" <> text arg <> text ":" <> pPrint typ <+> text "->" <+> text (show body) <+> text ")"
+  pPrint (LamVal arg typ body) = parens(text arg <> colon <> pPrint typ <+> text "->" <+> text (show body))
   pPrint (VarVal x) = text x
   pPrint (AVarVal u) = text "<" <> text u <> text ">"
-  pPrint (BangVal value trail) = text "![" <> pPrint trail <> text "]" <+> pPrint value
+  pPrint (BangVal value trail) = text "!" <> brackets(pPrint trail) <+> pPrint value
 
 type ValuePair = (Value, Trail)

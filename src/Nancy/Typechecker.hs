@@ -71,7 +71,7 @@ typecheckExpression (Let u uType arg body) = do
       throwError (Err.InvalidLetArgType uType bangType)
     _ -> throwError (Err.ExpectedBang argType)
 typecheckExpression
-  (Inspect
+  inspectExpr@(Inspect
    (TrailBranches
     rExp
     tExp
@@ -100,7 +100,7 @@ typecheckExpression
     && letType == createLamType rType 2
     && trplType == createLamType rType 9
   then return (rType, L.TiWit (L.TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit))
-  else throwError Err.InconsistentTrailMappings
+  else throwError (Err.BadInspectBranch inspectExpr)
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)
     createLamType :: L.Type -> Int -> L.Type

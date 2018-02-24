@@ -10,12 +10,8 @@ data TypecheckError
   | InvalidLetArgType Type Type
   | ExpectedLam Exp Type
   | ValidityVarUndefined String
-  | ValidityVarWrongType String Type
   | ExpectedBang Type
-  | TrailVarUndefined String
-  | InconsistentTrailMappings
-  | InvalidRenameDomain [String] [String]
-  | InvalidRenameCodomain [String] [String]
+  | BadInspectBranch Exp
   | PreTypecheckError String
   deriving (Eq, Show)
 
@@ -28,26 +24,13 @@ instance Pretty TypecheckError where
     text "Let expects type" <+> pPrint expectedType <> text ", but given type" <+> pPrint givenType
   pPrint (ExpectedLam leftExp leftType) =
     text "Left expresion of App" <+> text (show leftExp) <+> text "has type" <+> pPrint leftType <>
-      text ", should have type LamType"
+      text ", but should have type LamType"
   pPrint (ValidityVarUndefined vVar) =
     text "Validity variable" <+> text vVar <+> text "is not defined"
-  pPrint (ValidityVarWrongType vVar vType) =
-    text "Validity variable" <+> text vVar <+> text "has type" <+> pPrint vType <>
-      text ", should have type AuditedT"
   pPrint (ExpectedBang beType) =
     text "Let 'be' expression has type" <+> pPrint beType <>
       text ", should have type BangType"
-  pPrint (TrailVarUndefined tVar) =
-    text "Trail variable" <+> text tVar <+> text "is not defined"
-  pPrint InconsistentTrailMappings =
-    text "All trail mappings should have same type"
-  pPrint (InvalidRenameDomain boxTrailVars domain) =
-    vcat [ text "Domain of trail renaming should match box trail variables"
-         , nest 2 (text "domain:" <+> pPrint domain)
-         , nest 2 (text "boxTrailVars:" <+> pPrint boxTrailVars)]
-  pPrint (InvalidRenameCodomain initialTrailVars codomain) =
-    vcat [ text "Codomain of trail renaming should match initial trail variables"
-         , nest 2 (text "codomain:" <+> pPrint codomain)
-         , nest 2 (text "initialTrailVars:" <+> pPrint initialTrailVars)]
+  pPrint (BadInspectBranch inspectExpr) =
+    text "Inspect expression has at least one badly-typed branch:" <+> text (show inspectExpr)
   pPrint (PreTypecheckError err) =
     text err
