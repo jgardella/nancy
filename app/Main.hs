@@ -3,6 +3,8 @@ module Main(main) where
 import Options.Applicative
 import Data.Function((&))
 import Data.Semigroup((<>))
+import Control.Monad(unless)
+import System.IO
 import Nancy.Helper
 import Text.PrettyPrint.HughesPJClass( Pretty, prettyShow )
 
@@ -14,7 +16,7 @@ data Mode = Parse
 data Args = Args
   { mode :: Mode
   , pretty :: Bool
-  , fileName :: String }
+  , source :: String }
 
 parseMode :: Parser Mode
 parseMode = option auto
@@ -47,24 +49,39 @@ smartShow args a =
   else
     show a
 
-main :: IO ()
-main = do
-  args <- execParser opts
-  let input = case fileName args of
-                "<stdin>" -> getContents
-                file -> readFile file
+read' :: IO String
+read' = putStr "#> "
+     >> hFlush stdout
+     >> getLine
+
+eval :: Args -> String -> IO ()
+eval args input =
   case mode args of
-    Parse -> do
-      result <- fmap (parse $ fileName args) input
-      either (putStrLn . smartShow args) print result
-    Typecheck -> do
-      typecheckResult <- fmap (parseTypecheck $ fileName args) input
-      case typecheckResult of
+    Parse ->
+      either (putStrLn . smartShow args) print (parse (source args) input)
+    Typecheck ->
+      case parseTypecheck (source args) input of
         (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
-        (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nProof: \n" ++ smartShow args p) & putStrLn
+        (Right (t, p)) -> ("Type: \n" ++ smartShow args t ++ "\nWitness: \n" ++ smartShow args p) & putStrLn
     Interpret -> do
-      (interpretResult, logs) <- fmap (parseTypecheckInterpret $ fileName args) input
+      let (interpretResult, logs) = parseTypecheckInterpret (source args) input
       mapM_ putStrLn logs
       case interpretResult of
         (Left l) -> ("Error: " ++ smartShow args l) & putStrLn
         (Right v) -> ("Value: \n" ++ smartShow args v) & putStrLn
+
+repl :: Args -> IO ()
+repl args = do
+  input <- read'
+
+  unless (input == ":quit")
+    $ eval args input >> repl args
+
+main :: IO ()
+main = do
+  args <- execParser opts
+  case source args of
+    "<stdin>" -> repl args
+    fileName -> do
+      input <- readFile fileName
+      eval args input
