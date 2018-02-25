@@ -46,17 +46,8 @@ instance Pretty Witness where
   pPrint (LetWit arg argType argWit bodyWit) =
     text "letwit" <> parens(text arg <> colon <> pPrint argType <> comma
       <+> pPrint argWit <> comma <+> pPrint bodyWit)
-  pPrint (TiWit (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
-    text "tiwit" <> parens(
-      pPrint rWit <> comma
-      <+> pPrint tWit <> comma
-      <+> pPrint baWit <> comma
-      <+> pPrint bbWit <> comma
-      <+> pPrint tiWit <> comma
-      <+> pPrint lamWit <> comma
-      <+> pPrint appWit <> comma
-      <+> pPrint letWit <> comma
-      <+> pPrint trplWit)
+  pPrint (TiWit branches) =
+    text "tiwit" <> parens(pPrint branches)
 
 mapWitness :: (Type -> Type) -> (Witness -> Witness) -> Witness -> Witness
 mapWitness typeFunc witFunc (LamWit var varType lamWit) =
@@ -96,6 +87,18 @@ instance Functor TrailBranches where
       letB=f letB,
       trplB=f trplB
     }
+
+instance (Pretty a) => Pretty (TrailBranches a) where
+  pPrint TrailBranches {..} =
+    pPrint rB <> comma
+    <+> pPrint tB <> comma
+    <+> pPrint baB <> comma
+    <+> pPrint bbB <> comma
+    <+> pPrint tiB <> comma
+    <+> pPrint lamB <> comma
+    <+> pPrint appB <> comma
+    <+> pPrint letB <> comma
+    <+> pPrint trplB
 
 trailBranchesToList :: TrailBranches a -> [a]
 trailBranchesToList TrailBranches {..} =
@@ -142,17 +145,8 @@ instance Pretty Trail where
     text "bb" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argWit <> comma
     <+> pPrint bodyWit)
-  pPrint (TiTrail _ (TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit)) =
-    text "ti" <> parens(
-      pPrint rWit <> comma
-      <+> pPrint tWit <> comma
-      <+> pPrint baWit <> comma
-      <+> pPrint bbWit <> comma
-      <+> pPrint tiWit <> comma
-      <+> pPrint lamWit <> comma
-      <+> pPrint appWit <> comma
-      <+> pPrint letWit <> comma
-      <+> pPrint trplWit)
+  pPrint (TiTrail _ branches) =
+    text "ti" <> parens(pPrint branches)
   pPrint (LamTrail arg argType bodyTrail) =
     text "lam" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint bodyTrail)
@@ -164,17 +158,8 @@ instance Pretty Trail where
     text "let" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argTrail <> comma
     <+> pPrint bodyTrail)
-  pPrint (TrplTrail (TrailBranches rTrl tTrl baTrl bbTrl tiTrl lamTrl appTrl letTrl trplTrl)) =
-    text "trpl" <> parens(
-      pPrint rTrl <> comma
-      <+> pPrint tTrl <> comma
-      <+> pPrint baTrl <> comma
-      <+> pPrint bbTrl <> comma
-      <+> pPrint tiTrl <> comma
-      <+> pPrint lamTrl <> comma
-      <+> pPrint appTrl <> comma
-      <+> pPrint letTrl <> comma
-      <+> pPrint trplTrl)
+  pPrint (TrplTrail branches) =
+    text "trpl" <> parens(pPrint branches)
 
 mapTrail :: (Witness -> Witness) -> (Trail -> Trail) -> (Type -> Type) -> Trail -> Trail
 mapTrail witFunc _ _ (RTrail rWit) =
