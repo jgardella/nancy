@@ -10,6 +10,7 @@ data InterpretError
   | ValidityVarUndefined String
   | ExpectedBang Value
   | BadTrailValue
+  | InvalidTrailBranchList
   | PreInterpretError String
   deriving (Eq, Show)
 
@@ -22,7 +23,9 @@ instance Pretty InterpretError where
     text "Validity variable" <+> text wVar <+> text "is not defined"
   pPrint (ExpectedBang value) =
     text "Expected Bang value, but got" <+> pPrint value
-  pPrint BadTrailValue  =
+  pPrint BadTrailValue =
     text "Bad trail value"
+  pPrint InvalidTrailBranchList =
+    text "Invalid trail branch list"
   pPrint (PreInterpretError err) =
     text err

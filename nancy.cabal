@@ -43,6 +43,8 @@ library
     happy
   default-language:
     Haskell2010
+  default-extensions:
+    RecordWildCards
 
 executable nancy
   hs-source-dirs:

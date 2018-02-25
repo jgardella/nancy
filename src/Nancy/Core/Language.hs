@@ -84,41 +84,27 @@ data TrailBranches a = TrailBranches {
 } deriving (Eq, Show)
 
 instance Functor TrailBranches where
-  fmap f TrailBranches{
-    rB=rVal ,
-    tB=tVal,
-    baB=baVal,
-    bbB=bbVal,
-    tiB=tiVal,
-    lamB=lamVal,
-    appB=appVal,
-    letB=letVal,
-    trplB=trplVal
-  } =
+  fmap f TrailBranches {..} =
     TrailBranches{
-      rB=f rVal,
-      tB=f tVal,
-      baB=f baVal,
-      bbB=f bbVal,
-      tiB=f tiVal,
-      lamB=f lamVal,
-      appB=f appVal,
-      letB=f letVal,
-      trplB=f trplVal
+      rB=f rB,
+      tB=f tB,
+      baB=f baB,
+      bbB=f bbB,
+      tiB=f tiB,
+      lamB=f lamB,
+      appB=f appB,
+      letB=f letB,
+      trplB=f trplB
     }
 
 trailBranchesToList :: TrailBranches a -> [a]
-trailBranchesToList TrailBranches{
-  rB=rVal ,
-  tB=tVal,
-  baB=baVal,
-  bbB=bbVal,
-  tiB=tiVal,
-  lamB=lamVal,
-  appB=appVal,
-  letB=letVal,
-  trplB=trplVal
-} = [rVal, tVal, baVal, bbVal, tiVal, lamVal, appVal, letVal, trplVal]
+trailBranchesToList TrailBranches {..} =
+  [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB]
+
+trailBranchesFromList :: [a] -> Maybe (TrailBranches a)
+trailBranchesFromList [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB] =
+  Just TrailBranches {..}
+trailBranchesFromList _ = Nothing
 
 data Trail
     = RTrail Witness
