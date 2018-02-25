@@ -106,6 +106,19 @@ trailBranchesFromList [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB] =
   Just TrailBranches {..}
 trailBranchesFromList _ = Nothing
 
+trailBranchArity :: TrailBranches Integer
+trailBranchArity = TrailBranches {
+  rB = 0,
+  tB = 2,
+  baB = 0,
+  bbB = 0,
+  tiB = 0,
+  lamB = 1,
+  appB = 2,
+  letB = 2,
+  trplB = 9
+}
+
 data Trail
     = RTrail Witness
     | TTrail Trail Trail

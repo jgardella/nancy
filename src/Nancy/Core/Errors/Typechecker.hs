@@ -12,6 +12,7 @@ data TypecheckError
   | ValidityVarUndefined String
   | ExpectedBang Type
   | BadInspectBranch Expr
+  | InvalidTrailBranchList
   | PreTypecheckError String
   deriving (Eq, Show)
 
@@ -32,5 +33,7 @@ instance Pretty TypecheckError where
       text ", should have type BangType"
   pPrint (BadInspectBranch inspectExpr) =
     text "Inspect expression has at least one badly-typed branch:" <+> text (show inspectExpr)
+  pPrint InvalidTrailBranchList =
+    text "Invalid trail branch list"
   pPrint (PreTypecheckError err) =
     text err

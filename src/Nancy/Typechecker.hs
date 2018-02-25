@@ -70,40 +70,29 @@ typecheckExpression (Let u uType arg body) = do
     (L.BangType bangType _) | bangType /= uType ->
       throwError (Err.InvalidLetArgType uType bangType)
     _ -> throwError (Err.ExpectedBang argType)
-typecheckExpression
-  inspectExpr@(Inspect
-   (TrailBranches
-    rExpr
-    tExpr
-    baExpr
-    bbExpr
-    tiExpr
-    lamExpr
-    appExpr
-    letExpr
-    trplExpr
-  ))
-    = do
-  (rType, rWit) <- local keepWitEnv (typecheckExpression rExpr)
-  (tType, tWit) <- local keepWitEnv (typecheckExpression tExpr)
-  (baType, baWit) <- local keepWitEnv (typecheckExpression baExpr)
-  (bbType, bbWit) <- local keepWitEnv (typecheckExpression bbExpr)
-  (tiType, tiWit) <- local keepWitEnv (typecheckExpression tiExpr)
-  (lamType, lamWit) <- local keepWitEnv (typecheckExpression lamExpr)
-  (appType, appWit) <- local keepWitEnv (typecheckExpression appExpr)
-  (letType, letWit) <- local keepWitEnv (typecheckExpression letExpr)
-  (trplType, trplWit) <- local keepWitEnv (typecheckExpression trplExpr)
-  if allEqual [rType, baType, bbType, tiType]
-    && lamType == createLamType rType 1
-    && tType == createLamType rType 2
-    && appType == createLamType rType 2
-    && letType == createLamType rType 2
-    && trplType == createLamType rType 9
-  then return (rType, L.TiWit (L.TrailBranches rWit tWit baWit bbWit tiWit lamWit appWit letWit trplWit))
-  else throwError (Err.BadInspectBranch inspectExpr)
+typecheckExpression inspectExpr@(Inspect exprBranches) = do
+  (branchTypes, branchWits) <- typecheckBranches exprBranches
+  if branchTypes == createExpectedBranches (rB branchTypes) then
+    return (rB branchTypes, L.TiWit branchWits)
+  else
+    throwError (Err.BadInspectBranch inspectExpr)
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)
-    createLamType :: L.Type -> Int -> L.Type
+    typecheckBranchesFold acc branchExpr = do
+      (types, wits) <- acc
+      (branchType, branchWit) <- local keepWitEnv (typecheckExpression branchExpr)
+      return (types ++ [branchType], wits ++ [branchWit])
+    typecheckBranches branches = do
+      let branchesList = trailBranchesToList branches
+      (resultTypes, resultWits) <- foldl typecheckBranchesFold (return ([], [])) branchesList
+      case (trailBranchesFromList resultTypes, trailBranchesFromList resultWits) of
+        (Just branchTypes, Just branchWits) ->
+          return (branchTypes, branchWits)
+        _ ->
+          throwError Err.InvalidTrailBranchList
+    createLamType :: L.Type -> Integer -> L.Type
     createLamType t n
-      | n <= 1 = L.LamType t t
+      | n < 1 = t
+      | n == 1 = L.LamType t t
       | otherwise = L.LamType t (createLamType t (n - 1))
+    createExpectedBranches baseType = createLamType baseType <$> L.trailBranchArity
