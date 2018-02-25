@@ -78,13 +78,9 @@ typecheckExpression inspectExpr@(Inspect exprBranches) = do
     throwError (Err.BadInspectBranch inspectExpr)
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)
-    typecheckBranchesFold acc branchExpr = do
-      (types, wits) <- acc
-      (branchType, branchWit) <- local keepWitEnv (typecheckExpression branchExpr)
-      return (types ++ [branchType], wits ++ [branchWit])
     typecheckBranches branches = do
-      let branchesList = trailBranchesToList branches
-      (resultTypes, resultWits) <- foldl typecheckBranchesFold (return ([], [])) branchesList
+      result <- mapM (local keepWitEnv . typecheckExpression) (trailBranchesToList branches)
+      let (resultTypes, resultWits) = unzip result
       case (trailBranchesFromList resultTypes, trailBranchesFromList resultWits) of
         (Just branchTypes, Just branchWits) ->
           return (branchTypes, branchWits)
