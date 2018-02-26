@@ -47,6 +47,10 @@ import Nancy.Core.Util
   true  { Token _ TokenTrue }
   false { Token _ TokenFalse }
 
+%right in
+%right '->'
+%nonassoc id num true false '(' fun '<' '!' let 'let!' insp
+%nonassoc APP
 
 %%
 
@@ -59,8 +63,8 @@ Expr      : id                                  { Var $1 }
           | true                                { Boolean True }
           | false                               { Boolean False }
           | '(' Expr ')'                        { Brack $2 }
+          | Expr Expr %prec APP                 { App $1 $2 }
           | fun id ':' Type '->' Expr           { Lam $2 $4 $6 }
-          | Expr Expr                           { App $1 $2 }
           | '<' id '>'                          { AVar $2 }
           | '!' Expr                            { Bang $2 (RTrail (getWit $2)) }
           | let id ':' Type '=' Expr in Expr    { App (Lam $2 $4 $8) $6 }
