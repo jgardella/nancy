@@ -58,22 +58,3 @@ executable nancy
     pretty
   default-language:
     Haskell2010
-
-test-suite test
-  default-language:
-    Haskell2010
-  type:
-    exitcode-stdio-1.0
-  other-modules:
-    Test.Unit.Typechecker,
-    Test.Unit.Interpreter
-  hs-source-dirs:
-    test
-  main-is:
-    Test.hs
-  build-depends:
-    base >=4.9 && <4.10,
-    nancy,
-    tasty,
-    tasty-hunit,
-    containers
