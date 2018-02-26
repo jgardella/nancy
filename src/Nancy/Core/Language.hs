@@ -100,6 +100,32 @@ instance (Pretty a) => Pretty (TrailBranches a) where
     <+> pPrint letB <> comma
     <+> pPrint trplB
 
+mapTrailBranchesM :: (Monad m) => (a -> m b) -> TrailBranches a -> m (TrailBranches b)
+mapTrailBranchesM f TrailBranches{..} = do
+  rBResult <- f rB
+  tBResult <- f tB
+  baBResult <- f baB
+  bbBResult <- f bbB
+  tiBResult <- f tiB
+  lamBResult <- f lamB
+  appBResult <- f appB
+  letBResult <- f letB
+  trplBResult <- f trplB
+  return TrailBranches {
+    rB = rBResult,
+    tB = tBResult,
+    baB = baBResult,
+    bbB = bbBResult,
+    tiB = tiBResult,
+    lamB = lamBResult,
+    appB = appBResult,
+    letB = letBResult,
+    trplB = trplBResult
+  }
+
+unzipTrailBranches :: TrailBranches (a, b) -> (TrailBranches a, TrailBranches b)
+unzipTrailBranches branches = (fst <$> branches, snd <$> branches)
+
 trailBranchesToList :: TrailBranches a -> [a]
 trailBranchesToList TrailBranches {..} =
   [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB]

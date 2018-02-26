@@ -79,13 +79,8 @@ typecheckExpression inspectExpr@(Inspect exprBranches) = do
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)
     typecheckBranches branches = do
-      result <- mapM (local keepWitEnv . typecheckExpression) (trailBranchesToList branches)
-      let (resultTypes, resultWits) = unzip result
-      case (trailBranchesFromList resultTypes, trailBranchesFromList resultWits) of
-        (Just branchTypes, Just branchWits) ->
-          return (branchTypes, branchWits)
-        _ ->
-          throwError Err.InvalidTrailBranchList
+      mapResult <- mapTrailBranchesM (local keepWitEnv . typecheckExpression) branches
+      return $ unzipTrailBranches mapResult
     createLamType :: L.Type -> Integer -> L.Type
     createLamType t n
       | n < 1 = t
