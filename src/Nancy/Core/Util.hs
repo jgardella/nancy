@@ -67,8 +67,8 @@ trailSubOverAVar trail var val wit (L.App lamExpr argExpr) =
   L.AppTrail (trailSubOverAVar trail var val wit lamExpr) (trailSubOverAVar trail var val wit argExpr)
 trailSubOverAVar _ var _ wit (L.Bang _ bangTrail) =
   L.RTrail $ L.BangWit $ witSubOverAVarOnWit var wit (getSource bangTrail)
-trailSubOverAVar trail var val wit (L.Let letVar letVarType argExpr bodyExpr) =
-  L.LetTrail letVar letVarType (trailSubOverAVar trail var val wit argExpr) (trailSubOverAVar trail var val wit bodyExpr)
+trailSubOverAVar trail var val wit (L.ALet letVar letVarType argExpr bodyExpr) =
+  L.ALetTrail letVar letVarType (trailSubOverAVar trail var val wit argExpr) (trailSubOverAVar trail var val wit bodyExpr)
 trailSubOverAVar trail var val wit (L.Inspect branches) =
   L.TrplTrail $ fmap (trailSubOverAVar trail var val wit) branches
 trailSubOverAVar _ _ _ _ other =
@@ -82,15 +82,15 @@ getSource (L.TTrail trl1 _) =
 getSource (L.BaTrail arg argType bodyWit argWit) =
   L.AppWit (L.LamWit arg argType bodyWit) argWit
 getSource (L.BbTrail arg argType argWit bodyWit) =
-  L.LetWit arg argType (L.BangWit argWit) bodyWit
+  L.ALetWit arg argType (L.BangWit argWit) bodyWit
 getSource (L.TiTrail _ branches) =
   L.TiWit branches
 getSource (L.LamTrail arg argType bodyTrail) =
   L.LamWit arg argType (getSource bodyTrail)
 getSource (L.AppTrail lamTrail argTrail) =
   L.AppWit (getSource lamTrail) (getSource argTrail)
-getSource (L.LetTrail arg argType argTrail bodyTrail) =
-  L.LetWit arg argType (getSource argTrail) (getSource bodyTrail)
+getSource (L.ALetTrail arg argType argTrail bodyTrail) =
+  L.ALetWit arg argType (getSource argTrail) (getSource bodyTrail)
 getSource (L.TrplTrail branches) =
   L.TiWit $ fmap getSource branches
 
@@ -107,8 +107,8 @@ getTarget (L.LamTrail var varType bodyTrail) =
   L.LamWit var varType (getTarget bodyTrail)
 getTarget (L.AppTrail lamTrail argTrail) =
   L.AppWit (getTarget lamTrail) (getTarget argTrail)
-getTarget (L.LetTrail var varType argTrail bodyTrail) =
-  L.LetWit var varType (getTarget argTrail) (getTarget bodyTrail)
+getTarget (L.ALetTrail var varType argTrail bodyTrail) =
+  L.ALetWit var varType (getTarget argTrail) (getTarget bodyTrail)
 getTarget (L.TrplTrail branches) =
   L.TiWit $ fmap getTarget branches
 
@@ -129,41 +129,41 @@ getWit (L.App lam arg) =
   L.AppWit (getWit lam) (getWit arg)
 getWit (L.Bang _ trail) =
   L.BangWit (getSource trail)
-getWit (L.Let u typ arg body) =
-  L.LetWit u typ (getWit arg) (getWit body)
+getWit (L.ALet u typ arg body) =
+  L.ALetWit u typ (getWit arg) (getWit body)
 getWit (L.Inspect branches) =
   L.TiWit $ fmap getWit branches
 
 foldTrailToTerm :: L.TrailBranches L.Expr -> L.Trail -> L.Expr
-foldTrailToTerm L.TrailBranches{rB=expr} (L.RTrail _) =
+foldTrailToTerm L.TrailBranches{r=expr} (L.RTrail _) =
   expr
-foldTrailToTerm branches@L.TrailBranches{tB=expr} (L.TTrail t1 t2) =
+foldTrailToTerm branches@L.TrailBranches{t=expr} (L.TTrail t1 t2) =
   L.App
     (L.App
      expr
      (foldTrailToTerm branches t1))
     (foldTrailToTerm branches t2)
-foldTrailToTerm L.TrailBranches{baB=expr} L.BaTrail{} =
+foldTrailToTerm L.TrailBranches{ba=expr} L.BaTrail{} =
   expr
-foldTrailToTerm L.TrailBranches{bbB=expr} L.BbTrail{} =
+foldTrailToTerm L.TrailBranches{bb=expr} L.BbTrail{} =
   expr
-foldTrailToTerm L.TrailBranches{tiB=expr} L.TiTrail{} =
+foldTrailToTerm L.TrailBranches{ti=expr} L.TiTrail{} =
   expr
-foldTrailToTerm branches@L.TrailBranches{lamB=expr} (L.LamTrail _ _ bodyTrail) =
+foldTrailToTerm branches@L.TrailBranches{lam=expr} (L.LamTrail _ _ bodyTrail) =
   L.App expr (foldTrailToTerm branches bodyTrail)
-foldTrailToTerm branches@ L.TrailBranches{appB=expr} (L.AppTrail lamTrail bodyTrail) =
+foldTrailToTerm branches@ L.TrailBranches{app=expr} (L.AppTrail lamTrail bodyTrail) =
   L.App
     (L.App
      expr
      (foldTrailToTerm branches lamTrail))
     (foldTrailToTerm branches bodyTrail)
-foldTrailToTerm branches@L.TrailBranches{letB=expr} (L.LetTrail _ _ argTrail bodyTrail) =
+foldTrailToTerm branches@L.TrailBranches{alet=expr} (L.ALetTrail _ _ argTrail bodyTrail) =
   L.App
     (L.App
      expr
      (foldTrailToTerm branches argTrail))
     (foldTrailToTerm branches bodyTrail)
-foldTrailToTerm foldBranches@L.TrailBranches{trplB=expr}
+foldTrailToTerm foldBranches@L.TrailBranches{trpl=expr}
   (L.TrplTrail trailBranches) =
     foldHelper expr (trailBranchesToList trailBranches)
   where
@@ -178,35 +178,35 @@ foldTrailToTerm foldBranches@L.TrailBranches{trplB=expr}
         (foldTrailToTerm foldBranches x)
 
 foldTrailToWit :: L.TrailBranches L.Witness -> L.Trail -> L.Witness
-foldTrailToWit L.TrailBranches{rB=wit} (L.RTrail _) =
+foldTrailToWit L.TrailBranches{r=wit} (L.RTrail _) =
   wit
-foldTrailToWit branches@L.TrailBranches{tB=wit} (L.TTrail t1 t2) =
+foldTrailToWit branches@L.TrailBranches{t=wit} (L.TTrail t1 t2) =
   L.AppWit
     (L.AppWit
      wit
      (foldTrailToWit branches t1))
     (foldTrailToWit branches t2)
-foldTrailToWit L.TrailBranches{baB=wit} L.BaTrail{} =
+foldTrailToWit L.TrailBranches{ba=wit} L.BaTrail{} =
   wit
-foldTrailToWit L.TrailBranches{bbB=wit} L.BbTrail{} =
+foldTrailToWit L.TrailBranches{bb=wit} L.BbTrail{} =
   wit
-foldTrailToWit L.TrailBranches{tiB=wit} L.TiTrail{} =
+foldTrailToWit L.TrailBranches{ti=wit} L.TiTrail{} =
   wit
-foldTrailToWit branches@L.TrailBranches{lamB=wit} (L.LamTrail _ _ bodyTrail) =
+foldTrailToWit branches@L.TrailBranches{lam=wit} (L.LamTrail _ _ bodyTrail) =
   L.AppWit wit (foldTrailToWit branches bodyTrail)
-foldTrailToWit branches@ L.TrailBranches{appB=wit} (L.AppTrail lamTrail bodyTrail) =
+foldTrailToWit branches@ L.TrailBranches{app=wit} (L.AppTrail lamTrail bodyTrail) =
   L.AppWit
     (L.AppWit
      wit
      (foldTrailToWit branches lamTrail))
     (foldTrailToWit branches bodyTrail)
-foldTrailToWit branches@L.TrailBranches{letB=wit} (L.LetTrail _ _ argTrail bodyTrail) =
+foldTrailToWit branches@L.TrailBranches{alet=wit} (L.ALetTrail _ _ argTrail bodyTrail) =
   L.AppWit
     (L.AppWit
      wit
      (foldTrailToWit branches argTrail))
     (foldTrailToWit branches bodyTrail)
-foldTrailToWit foldBranches@L.TrailBranches{trplB=wit}
+foldTrailToWit foldBranches@L.TrailBranches{trpl=wit}
   (L.TrplTrail trailBranches) =
     foldHelper wit (trailBranchesToList trailBranches)
   where

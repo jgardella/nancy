@@ -65,7 +65,7 @@ interpretExpression (App lam arg) = do
 interpretExpression expr@(Bang body bangTrail) = do
   (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
   return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit expr)
-interpretExpression (Let letVar letVarType letArg letBody) = do
+interpretExpression (ALet letVar letVarType letArg letBody) = do
   (argValue, argTrail) <- interpretExpression letArg
   case argValue of
     (L.BangVal bangVal bangTrail) -> do
@@ -77,11 +77,11 @@ interpretExpression (Let letVar letVarType letArg letBody) = do
   where
     updateTrailForBody argTrail bangTrail bangVal currentTrail =
       currentTrail
-      <--> L.LetTrail letVar letVarType argTrail (L.RTrail $ getWit letBody)
+      <--> L.ALetTrail letVar letVarType argTrail (L.RTrail $ getWit letBody)
       <--> L.BbTrail letVar letVarType (getSource bangTrail) (getWit letBody)
       <--> trailSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody
     getReturnTrail argTrail bangTrail bangVal resultTrail =
-      L.LetTrail letVar letVarType argTrail (L.RTrail $ getWit letBody)
+      L.ALetTrail letVar letVarType argTrail (L.RTrail $ getWit letBody)
       <--> L.BbTrail letVar letVarType (getSource bangTrail) (getWit letBody)
       <--> trailSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody
       <--> resultTrail

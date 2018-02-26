@@ -21,6 +21,7 @@ import Nancy.Core.Util
   num   { Token _ (TokenNum $$) }
   fun   { Token _ TokenFun }
   insp  { Token _ TokenInspect }
+  '='   { Token _ TokenEq }
   '->'  { Token _ TokenArrow }
   '<'   { Token _ TokenLBrack }
   '>'   { Token _ TokenRBrack }
@@ -30,7 +31,6 @@ import Nancy.Core.Util
   '}'   { Token _ TokenRBrace }
   ':'   { Token _ TokenColon }
   '!'   { Token _ TokenBang }
-  '.'   { Token _ TokenDot }
   'r'   { Token _ TokenR }
   't'   { Token _ TokenT }
   ba    { Token _ TokenBA }
@@ -40,7 +40,7 @@ import Nancy.Core.Util
   app   { Token _ TokenAPP }
   trpl  { Token _ TokenTRPL }
   let   { Token _ TokenLet }
-  be    { Token _ TokenBe }
+  'let!'{ Token _ TokenLetBang }
   in    { Token _ TokenIn }
   int   { Token _ TokenInt }
   bool  { Token _ TokenBool }
@@ -50,30 +50,31 @@ import Nancy.Core.Util
 
 %%
 
-Program   : Exp                              { Program $1 }
-Type      : int                              { IntType }
-          | bool                             { BoolType }
-          | Type '->' Type                   { LamType $1 $3 }
-Exp       : id                               { Var $1 }
-          | num                              { Number $1 }
-          | true                             { Boolean True }
-          | false                            { Boolean False }
-          | '(' Exp ')'                      { Brack $2 }
-          | fun '(' id ':' Type ')' '->' Exp { Lam $3 $5 $8 }
-          | Exp Exp                          { App $1 $2 }
-          | '<' id '>'                       { AVar $2 }
-          | '!' Exp                          { Bang $2 (RTrail (getWit $2)) }
-          | let id ':' Type be Exp in Exp    { Let $2 $4 $6 $8 }
+Program   : Expr                                { Program $1 }
+Type      : int                                 { IntType }
+          | bool                                { BoolType }
+          | Type '->' Type                      { LamType $1 $3 }
+Expr      : id                                  { Var $1 }
+          | num                                 { Number $1 }
+          | true                                { Boolean True }
+          | false                               { Boolean False }
+          | '(' Expr ')'                        { Brack $2 }
+          | fun id ':' Type '->' Expr           { Lam $2 $4 $6 }
+          | Expr Expr                           { App $1 $2 }
+          | '<' id '>'                          { AVar $2 }
+          | '!' Expr                            { Bang $2 (RTrail (getWit $2)) }
+          | let id ':' Type '=' Expr in Expr    { App (Lam $2 $4 $8) $6 }
+          | 'let!' id ':' Type '=' Expr in Expr { ALet $2 $4 $6 $8 }
           | insp '{'
-              'r' '->' Exp
-              't' '->' Exp
-              ba '->' Exp
-              bb '->' Exp
-              ti '->' Exp
-              lam '->' Exp
-              app '->' Exp
-              let '->' Exp
-              trpl '->' Exp
+              'r' '->' Expr
+              't' '->' Expr
+              ba '->' Expr
+              bb '->' Expr
+              ti '->' Expr
+              lam '->' Expr
+              app '->' Expr
+              let '->' Expr
+              trpl '->' Expr
             '}' { Inspect (TrailBranches $5 $8 $11 $14 $17 $20 $23 $26 $29) }
 
 {

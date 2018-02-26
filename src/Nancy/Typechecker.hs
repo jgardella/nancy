@@ -61,19 +61,19 @@ typecheckExpression (AVar u) = do
 typecheckExpression (Bang body _) = do
   (bodyType, bodyWit) <- local (updateTruthEnv $ const E.empty) (typecheckExpression body)
   return (L.BangType bodyType bodyWit, L.BangWit bodyWit)
-typecheckExpression (Let u uType arg body) = do
+typecheckExpression (ALet u uType arg body) = do
   (argType, argWit) <- typecheckExpression arg
   case argType of
     (L.BangType bangType bangWit) | bangType == uType -> do
       (bodyType, bodyWit) <- local (updateWitnessEnv $ E.save u bangType) (typecheckExpression body)
-      return (witSubOverAVarOnType u bangWit bodyType, L.LetWit u uType bodyWit argWit)
+      return (witSubOverAVarOnType u bangWit bodyType, L.ALetWit u uType bodyWit argWit)
     (L.BangType bangType _) | bangType /= uType ->
       throwError (Err.InvalidLetArgType uType bangType)
     _ -> throwError (Err.ExpectedBang argType)
 typecheckExpression inspectExpr@(Inspect exprBranches) = do
   (branchTypes, branchWits) <- typecheckBranches exprBranches
-  if branchTypes == createExpectedBranches (rB branchTypes) then
-    return (rB branchTypes, L.TiWit branchWits)
+  if branchTypes == createExpectedBranches (r branchTypes) then
+    return (r branchTypes, L.TiWit branchWits)
   else
     throwError (Err.BadInspectBranch inspectExpr)
   where

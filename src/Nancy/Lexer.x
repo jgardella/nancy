@@ -25,6 +25,7 @@ tokens :-
   fun                             { lex' TokenFun }
   inspect                         { lex' TokenInspect }
   "->"                            { lex' TokenArrow }
+  "="                             { lex' TokenEq }
   "<"                             { lex' TokenLBrack }
   ">"                             { lex' TokenRBrack }
   "{"                             { lex' TokenLBrace }
@@ -33,7 +34,6 @@ tokens :-
   ")"                             { lex' TokenRParen }
   ":"                             { lex' TokenColon }
   "!"                             { lex' TokenBang }
-  "."                             { lex' TokenDot }
   "r"                             { lex' TokenR }
   "t"                             { lex' TokenT }
   ba                              { lex' TokenBA }
@@ -43,7 +43,7 @@ tokens :-
   app                             { lex' TokenAPP }
   trpl                            { lex' TokenTRPL }
   let                             { lex' TokenLet }
-  be                              { lex' TokenBe }
+  let!                            { lex' TokenLetBang }
   in                              { lex' TokenIn }
   int                             { lex' TokenInt }
   bool                            { lex' TokenBool }
@@ -74,6 +74,7 @@ data TokenClass
   = TokenFun
   | TokenInspect
   | TokenArrow
+  | TokenEq
   | TokenLBrack
   | TokenRBrack
   | TokenLBrace
@@ -92,6 +93,7 @@ data TokenClass
   | TokenAPP
   | TokenTRPL
   | TokenLet
+  | TokenLetBang
   | TokenBe
   | TokenIn
   | TokenTrue

@@ -1,7 +1,7 @@
-! let u:int->bool be
-    ! fun (a:int) -> true
+let! u:int->bool =
+  !fun a:int -> true
+in
+  let! w:bool->int =
+    !fun b:bool -> 1
   in
-    let w:bool->int be
-      ! fun (b:bool) -> 1
-    in
-      <w> (<u> 3)
+    <w> (<u> 3)

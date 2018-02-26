@@ -31,7 +31,7 @@ data Witness
   | AppWit Witness Witness
   | AVarWit String
   | BangWit Witness
-  | LetWit String Type Witness Witness
+  | ALetWit String Type Witness Witness
   | TiWit (TrailBranches Witness)
   deriving (Eq, Show)
 
@@ -43,8 +43,8 @@ instance Pretty Witness where
   pPrint (AppWit lamWit argWit) = text "appwit" <> parens(pPrint lamWit <> comma <> pPrint argWit)
   pPrint (AVarWit avar) = text "avarwit" <> parens(text avar)
   pPrint (BangWit bangWit) = text "bangwit" <> parens(pPrint bangWit)
-  pPrint (LetWit arg argType argWit bodyWit) =
-    text "letwit" <> parens(text arg <> colon <> pPrint argType <> comma
+  pPrint (ALetWit arg argType argWit bodyWit) =
+    text "aletwit" <> parens(text arg <> colon <> pPrint argType <> comma
       <+> pPrint argWit <> comma <+> pPrint bodyWit)
   pPrint (TiWit branches) =
     text "tiwit" <> parens(pPrint branches)
@@ -56,71 +56,71 @@ mapWitness _ witFunc (AppWit lamWit argWit) =
   AppWit (witFunc lamWit) (witFunc argWit)
 mapWitness _ witFunc (BangWit bangWit) =
   BangWit $ witFunc bangWit
-mapWitness typeFunc witFunc (LetWit var varType argWit bodyWit) =
-  LetWit var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
+mapWitness typeFunc witFunc (ALetWit var varType argWit bodyWit) =
+  ALetWit var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
 mapWitness typeFunc witFunc (TiWit branchWits) =
   TiWit $ fmap (mapWitness typeFunc witFunc) branchWits
 mapWitness _ _ otherWitness = otherWitness
 
 data TrailBranches a = TrailBranches {
-  rB :: a,
-  tB :: a,
-  baB :: a,
-  bbB :: a,
-  tiB :: a,
-  lamB :: a,
-  appB :: a,
-  letB :: a,
-  trplB :: a
+  r :: a,
+  t :: a,
+  ba :: a,
+  bb :: a,
+  ti :: a,
+  lam :: a,
+  app :: a,
+  alet :: a,
+  trpl :: a
 } deriving (Eq, Show)
 
 instance Functor TrailBranches where
   fmap f TrailBranches {..} =
     TrailBranches{
-      rB=f rB,
-      tB=f tB,
-      baB=f baB,
-      bbB=f bbB,
-      tiB=f tiB,
-      lamB=f lamB,
-      appB=f appB,
-      letB=f letB,
-      trplB=f trplB
+      r=f r,
+      t=f t,
+      ba=f ba,
+      bb=f bb,
+      ti=f ti,
+      lam=f lam,
+      app=f app,
+      alet=f alet,
+      trpl=f trpl
     }
 
 instance (Pretty a) => Pretty (TrailBranches a) where
   pPrint TrailBranches {..} =
-    pPrint rB <> comma
-    <+> pPrint tB <> comma
-    <+> pPrint baB <> comma
-    <+> pPrint bbB <> comma
-    <+> pPrint tiB <> comma
-    <+> pPrint lamB <> comma
-    <+> pPrint appB <> comma
-    <+> pPrint letB <> comma
-    <+> pPrint trplB
+    pPrint r <> comma
+    <+> pPrint t <> comma
+    <+> pPrint ba <> comma
+    <+> pPrint bb <> comma
+    <+> pPrint ti <> comma
+    <+> pPrint lam <> comma
+    <+> pPrint app <> comma
+    <+> pPrint alet <> comma
+    <+> pPrint trpl
 
 mapTrailBranchesM :: (Monad m) => (a -> m b) -> TrailBranches a -> m (TrailBranches b)
 mapTrailBranchesM f TrailBranches{..} = do
-  rBResult <- f rB
-  tBResult <- f tB
-  baBResult <- f baB
-  bbBResult <- f bbB
-  tiBResult <- f tiB
-  lamBResult <- f lamB
-  appBResult <- f appB
-  letBResult <- f letB
-  trplBResult <- f trplB
+  rResult <- f r
+  tResult <- f t
+  baResult <- f ba
+  bbResult <- f bb
+  tiResult <- f ti
+  lamResult <- f lam
+  appResult <- f app
+  aletResult <- f alet
+  trplResult <- f trpl
   return TrailBranches {
-    rB = rBResult,
-    tB = tBResult,
-    baB = baBResult,
-    bbB = bbBResult,
-    tiB = tiBResult,
-    lamB = lamBResult,
-    appB = appBResult,
-    letB = letBResult,
-    trplB = trplBResult
+    r = rResult,
+    t = tResult,
+    ba = baResult,
+    bb = bbResult,
+    ti = tiResult,
+    lam = lamResult,
+    app = appResult,
+    alet = aletResult,
+    trpl = trplResult
   }
 
 unzipTrailBranches :: TrailBranches (a, b) -> (TrailBranches a, TrailBranches b)
@@ -128,24 +128,24 @@ unzipTrailBranches branches = (fst <$> branches, snd <$> branches)
 
 trailBranchesToList :: TrailBranches a -> [a]
 trailBranchesToList TrailBranches {..} =
-  [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB]
+  [r, t, ba, bb, ti, lam, app, alet, trpl]
 
 trailBranchesFromList :: [a] -> Maybe (TrailBranches a)
-trailBranchesFromList [rB, tB, baB, bbB, tiB, lamB, appB, letB, trplB] =
+trailBranchesFromList [r, t, ba, bb, ti, lam, app, alet, trpl] =
   Just TrailBranches {..}
 trailBranchesFromList _ = Nothing
 
 trailBranchArity :: TrailBranches Integer
 trailBranchArity = TrailBranches {
-  rB = 0,
-  tB = 2,
-  baB = 0,
-  bbB = 0,
-  tiB = 0,
-  lamB = 1,
-  appB = 2,
-  letB = 2,
-  trplB = 9
+  r = 0,
+  t = 2,
+  ba = 0,
+  bb = 0,
+  ti = 0,
+  lam = 1,
+  app = 2,
+  alet = 2,
+  trpl = 9
 }
 
 data Trail
@@ -156,7 +156,7 @@ data Trail
     | TiTrail Trail (TrailBranches Witness)
     | LamTrail String Type Trail
     | AppTrail Trail Trail
-    | LetTrail String Type Trail Trail
+    | ALetTrail String Type Trail Trail
     | TrplTrail (TrailBranches Trail)
     deriving (Eq, Show)
 
@@ -180,8 +180,8 @@ instance Pretty Trail where
     text "app" <> parens(
     pPrint lamTrail <> comma
     <+> pPrint argTrail)
-  pPrint (LetTrail arg argType argTrail bodyTrail) =
-    text "let" <> parens(
+  pPrint (ALetTrail arg argType argTrail bodyTrail) =
+    text "alet" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argTrail <> comma
     <+> pPrint bodyTrail)
   pPrint (TrplTrail branches) =
@@ -202,8 +202,8 @@ mapTrail _ trailFunc typeFunc (LamTrail var varType lamTrail) =
   LamTrail var (typeFunc varType) (trailFunc lamTrail)
 mapTrail _ trailFunc _ (AppTrail lamTrail argTrail) =
   AppTrail (trailFunc lamTrail) (trailFunc argTrail)
-mapTrail _ trailFunc typeFunc (LetTrail var varType argTrail bodyTrail) =
-  LetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
+mapTrail _ trailFunc typeFunc (ALetTrail var varType argTrail bodyTrail) =
+  ALetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
 mapTrail _ trailFunc _ (TrplTrail branchTrails) =
   TrplTrail $ fmap trailFunc branchTrails
 
@@ -223,7 +223,7 @@ data Expr
   | App Expr Expr
   | AVar String
   | Bang Expr Trail
-  | Let String Type Expr Expr
+  | ALet String Type Expr Expr
   | Inspect (TrailBranches Expr)
   deriving (Eq, Show)
 
@@ -235,8 +235,8 @@ mapExpr f (App lamExpr argExpr) =
   App (f lamExpr) (f argExpr)
 mapExpr f (Bang bangExpr bangTrail) =
   Bang (f bangExpr) bangTrail
-mapExpr f (Let var varType argExpr bodyExpr) =
-  Let var varType (f argExpr) (f bodyExpr)
+mapExpr f (ALet var varType argExpr bodyExpr) =
+  ALet var varType (f argExpr) (f bodyExpr)
 mapExpr f (Inspect branches) =
   Inspect $ fmap f branches
 mapExpr _ otherExpr = otherExpr
