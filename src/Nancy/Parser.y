@@ -61,20 +61,22 @@ Type      : int                                 { IntType }
           | bool                                { BoolType }
           | Type '->' Type                      { LamType $1 $3 }
           | '(' Type ')'                        { $2 }
-Assign    : id ':' Type '=' Expr                { Assign $1 $3 $5 }
-LetVars   : Assign                              { [$1] }
-          | Assign ',' LetVars                  { $1 : $3 }
+IdType    : id ':' Type                         { ($1, $3) }
+          | '(' IdType ')'                      { $2 }
+Assign    : IdType '=' Expr                     { Assign (fst $1) (snd $1) $3 }
+Assigns   : Assign                              { [$1] }
+          | Assign ',' Assigns                  { $1 : $3 }
 Expr      : id                                  { Var $1 }
           | num                                 { Number $1 }
           | true                                { Boolean True }
           | false                               { Boolean False }
           | '(' Expr ')'                        { Brack $2 }
           | Expr Expr %prec APP                 { App $1 $2 }
-          | fun id ':' Type '->' Expr           { Lam $2 $4 $6 }
+          | fun IdType '->' Expr                { Lam (fst $2) (snd $2) $4 }
           | '<' id '>'                          { AVar $2 }
           | '!' Expr                            { Bang $2 (RTrail (getWit $2)) }
-          | let LetVars in Expr                 { (unwrapLetVars $4 $2) }
-          | 'let!' LetVars in Expr              { (unwrapALetVars $4 $2) }
+          | let Assigns in Expr                 { (unwrapLetVars $4 $2) }
+          | 'let!' Assigns in Expr              { (unwrapALetVars $4 $2) }
           | insp '{'
               'r' '->' Expr
               't' '->' Expr
