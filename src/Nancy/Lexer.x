@@ -34,6 +34,7 @@ tokens :-
   ")"                             { lex' TokenRParen }
   ":"                             { lex' TokenColon }
   "!"                             { lex' TokenBang }
+  ","                             { lex' TokenComma }
   "r"                             { lex' TokenR }
   "t"                             { lex' TokenT }
   ba                              { lex' TokenBA }
@@ -42,6 +43,7 @@ tokens :-
   lam                             { lex' TokenLAM }
   app                             { lex' TokenAPP }
   trpl                            { lex' TokenTRPL }
+  alet                            { lex' TokenALet }
   let                             { lex' TokenLet }
   let!                            { lex' TokenLetBang }
   in                              { lex' TokenIn }
@@ -83,6 +85,7 @@ data TokenClass
   | TokenRParen
   | TokenDot
   | TokenBang
+  | TokenComma
   | TokenColon
   | TokenR
   | TokenT
@@ -92,6 +95,7 @@ data TokenClass
   | TokenLAM
   | TokenAPP
   | TokenTRPL
+  | TokenALet
   | TokenLet
   | TokenLetBang
   | TokenBe
