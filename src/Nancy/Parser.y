@@ -74,7 +74,7 @@ Expr      : id                                  { Var $1 }
           | '<' id '>'                          { AVar $2 }
           | '!' Expr                            { Bang $2 (RTrail (getWit $2)) }
           | let LetVars in Expr                 { (unwrapLetVars $4 $2) }
-          | 'let!' id ':' Type '=' Expr in Expr { ALet $2 $4 $6 $8 }
+          | 'let!' LetVars in Expr              { (unwrapALetVars $4 $2) }
           | insp '{'
               'r' '->' Expr
               't' '->' Expr
@@ -89,6 +89,12 @@ Expr      : id                                  { Var $1 }
 
 {
 data Assign = Assign String Type Expr
+
+unwrapALetVars :: Expr -> [Assign] -> Expr
+unwrapALetVars body ((Assign var varType varExpr):vars) =
+  ALet var varType varExpr (unwrapALetVars body vars)
+unwrapALetVars body [] =
+  body
 
 unwrapLetVars :: Expr -> [Assign] -> Expr
 unwrapLetVars body assigns =
