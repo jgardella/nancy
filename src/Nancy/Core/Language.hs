@@ -13,7 +13,7 @@ data Type
 instance Pretty Type where
   pPrint IntType = text "int"
   pPrint BoolType = text "bool"
-  pPrint (LamType argType returnType) = pPrint argType <+> text "->" <+> pPrint returnType
+  pPrint (LamType argType returnType) = parens(pPrint argType <> text "->" <> pPrint returnType)
   pPrint (BangType bodyType witness) = pPrint bodyType <+> brackets(pPrint witness)
 
 mapType :: (Witness -> Witness) -> (Type -> Type) -> Type -> Type
