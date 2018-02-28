@@ -32,6 +32,7 @@ import Nancy.Core.Util
   ':'   { Token _ TokenColon }
   '!'   { Token _ TokenBang }
   ','   { Token _ TokenComma }
+  '+'   { Token _ TokenPlus }
   'r'   { Token _ TokenR }
   't'   { Token _ TokenT }
   ba    { Token _ TokenBA }
@@ -39,6 +40,7 @@ import Nancy.Core.Util
   ti    { Token _ TokenTI }
   lam   { Token _ TokenLAM }
   app   { Token _ TokenAPP }
+  pls   { Token _ TokenPLS }
   trpl  { Token _ TokenTRPL }
   let   { Token _ TokenLet }
   alet  { Token _ TokenALet }
@@ -51,6 +53,7 @@ import Nancy.Core.Util
 
 %right in
 %right '->'
+%left '+'
 %nonassoc id num true false '(' fun '<' '!' let 'let!' insp
 %nonassoc APP
 
@@ -61,8 +64,7 @@ Type      : int                                 { IntType }
           | bool                                { BoolType }
           | Type '->' Type                      { LamType $1 $3 }
           | '(' Type ')'                        { $2 }
-IdType    : id ':' Type                         { ($1, $3) }
-          | '(' IdType ')'                      { $2 }
+IdType    : '(' id ':' Type ')'                 { ($2, $4) }
 Assign    : IdType '=' Expr                     { Assign (fst $1) (snd $1) $3 }
 Assigns   : Assign                              { [$1] }
           | Assign ',' Assigns                  { $1 : $3 }
@@ -73,6 +75,7 @@ Expr      : id                                  { Var $1 }
           | '(' Expr ')'                        { Brack $2 }
           | Expr Expr %prec APP                 { App $1 $2 }
           | fun IdType '->' Expr                { Lam (fst $2) (snd $2) $4 }
+          | Expr '+' Expr                       { Plus $1 $3 }
           | '<' id '>'                          { AVar $2 }
           | '!' Expr                            { Bang $2 (RTrail (getWit $2)) }
           | let Assigns in Expr                 { (unwrapLetVars $4 $2) }
@@ -85,9 +88,10 @@ Expr      : id                                  { Var $1 }
               ti '->' Expr
               lam '->' Expr
               app '->' Expr
+              pls '->' Expr
               alet '->' Expr
               trpl '->' Expr
-            '}' { Inspect (TrailBranches $5 $8 $11 $14 $17 $20 $23 $26 $29) }
+            '}' { Inspect (TrailBranches $5 $8 $11 $14 $17 $20 $23 $26 $29 $32) }
 
 {
 data Assign = Assign String Type Expr

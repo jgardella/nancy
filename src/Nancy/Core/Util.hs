@@ -65,6 +65,8 @@ trailSubOverAVar trail var val wit (L.Lam arg argType argExpr) =
   L.LamTrail arg argType (trailSubOverAVar trail var val wit argExpr)
 trailSubOverAVar trail var val wit (L.App lamExpr argExpr) =
   L.AppTrail (trailSubOverAVar trail var val wit lamExpr) (trailSubOverAVar trail var val wit argExpr)
+trailSubOverAVar trail var val wit (L.Plus leftExpr rightExpr) =
+  L.PlusTrail (trailSubOverAVar trail var val wit leftExpr) (trailSubOverAVar trail var val wit rightExpr)
 trailSubOverAVar _ var _ wit (L.Bang _ bangTrail) =
   L.RTrail $ L.BangWit $ witSubOverAVarOnWit var wit (getSource bangTrail)
 trailSubOverAVar trail var val wit (L.ALet letVar letVarType argExpr bodyExpr) =
@@ -89,6 +91,8 @@ getSource (L.LamTrail arg argType bodyTrail) =
   L.LamWit arg argType (getSource bodyTrail)
 getSource (L.AppTrail lamTrail argTrail) =
   L.AppWit (getSource lamTrail) (getSource argTrail)
+getSource (L.PlusTrail leftTrail rightTrail) =
+  L.PlusWit (getSource leftTrail) (getSource rightTrail)
 getSource (L.ALetTrail arg argType argTrail bodyTrail) =
   L.ALetWit arg argType (getSource argTrail) (getSource bodyTrail)
 getSource (L.TrplTrail branches) =
@@ -107,6 +111,8 @@ getTarget (L.LamTrail var varType bodyTrail) =
   L.LamWit var varType (getTarget bodyTrail)
 getTarget (L.AppTrail lamTrail argTrail) =
   L.AppWit (getTarget lamTrail) (getTarget argTrail)
+getTarget (L.PlusTrail leftTrail rightTrail) =
+  L.PlusWit (getTarget leftTrail) (getTarget rightTrail)
 getTarget (L.ALetTrail var varType argTrail bodyTrail) =
   L.ALetWit var varType (getTarget argTrail) (getTarget bodyTrail)
 getTarget (L.TrplTrail branches) =
@@ -127,6 +133,8 @@ getWit (L.Lam arg argType body) =
   L.LamWit arg argType (getWit body)
 getWit (L.App lam arg) =
   L.AppWit (getWit lam) (getWit arg)
+getWit (L.Plus leftExpr rightExpr) =
+  L.PlusWit (getWit leftExpr) (getWit rightExpr)
 getWit (L.Bang _ trail) =
   L.BangWit (getSource trail)
 getWit (L.ALet u typ arg body) =
@@ -157,6 +165,12 @@ foldTrailToTerm branches@ L.TrailBranches{app=expr} (L.AppTrail lamTrail bodyTra
      expr
      (foldTrailToTerm branches lamTrail))
     (foldTrailToTerm branches bodyTrail)
+foldTrailToTerm branches@ L.TrailBranches{app=expr} (L.PlusTrail leftExpr rightExpr) =
+  L.App
+    (L.App
+     expr
+     (foldTrailToTerm branches leftExpr))
+    (foldTrailToTerm branches rightExpr)
 foldTrailToTerm branches@L.TrailBranches{alet=expr} (L.ALetTrail _ _ argTrail bodyTrail) =
   L.App
     (L.App
@@ -200,6 +214,12 @@ foldTrailToWit branches@ L.TrailBranches{app=wit} (L.AppTrail lamTrail bodyTrail
      wit
      (foldTrailToWit branches lamTrail))
     (foldTrailToWit branches bodyTrail)
+foldTrailToWit branches@ L.TrailBranches{app=wit} (L.PlusTrail leftTrail rightTrail) =
+  L.AppWit
+    (L.AppWit
+     wit
+     (foldTrailToWit branches leftTrail))
+    (foldTrailToWit branches rightTrail)
 foldTrailToWit branches@L.TrailBranches{alet=wit} (L.ALetTrail _ _ argTrail bodyTrail) =
   L.AppWit
     (L.AppWit

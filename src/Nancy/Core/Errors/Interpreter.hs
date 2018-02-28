@@ -11,6 +11,7 @@ data InterpretError
   | ExpectedBang Value
   | BadTrailValue
   | InvalidTrailBranchList
+  | InvalidPlusArgs Expr
   | PreInterpretError String
   deriving (Eq, Show)
 
@@ -25,6 +26,8 @@ instance Pretty InterpretError where
     text "Expected Bang value, but got" <+> pPrint value
   pPrint BadTrailValue =
     text "Bad trail value"
+  pPrint (InvalidPlusArgs plusExpr) =
+    text "Invalid plus args in expression:" <+> text (show plusExpr)
   pPrint InvalidTrailBranchList =
     text "Invalid trail branch list"
   pPrint (PreInterpretError err) =

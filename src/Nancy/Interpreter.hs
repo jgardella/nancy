@@ -62,6 +62,17 @@ interpretExpression (App lam arg) = do
       L.AppTrail lamTrail argTrail
       <--> L.BaTrail var varType (getTarget lamTrail) (getTarget argTrail)
       <--> resultTrail
+interpretExpression plusExpr@(Plus leftExpr rightExpr) = do
+  (leftVal, leftTrail) <- interpretExpression leftExpr
+  (rightVal, rightTrail) <- local (updateTrailForRight leftTrail) (interpretExpression rightExpr)
+  case (leftVal, rightVal) of
+    (IntVal leftInt, IntVal rightInt) ->
+      return (IntVal (leftInt + rightInt), L.PlusTrail leftTrail rightTrail)
+    _ ->
+      throwError (Err.InvalidPlusArgs plusExpr)
+  where
+    updateTrailForRight leftTrail currentTrail =
+      currentTrail <--> L.PlusTrail leftTrail (L.RTrail (getWit rightExpr))
 interpretExpression expr@(Bang body bangTrail) = do
   (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
   return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit expr)

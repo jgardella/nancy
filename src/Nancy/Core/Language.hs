@@ -29,6 +29,7 @@ data Witness
   | BoolWit Bool
   | LamWit String Type Witness
   | AppWit Witness Witness
+  | PlusWit Witness Witness
   | AVarWit String
   | BangWit Witness
   | ALetWit String Type Witness Witness
@@ -41,6 +42,7 @@ instance Pretty Witness where
   pPrint (BoolWit boolVal) = text "boolwit" <> parens(text (show boolVal))
   pPrint (LamWit arg argType bodyWit) = text "lamwit" <> parens(text arg <> colon <> pPrint argType <> comma <+> pPrint bodyWit)
   pPrint (AppWit lamWit argWit) = text "appwit" <> parens(pPrint lamWit <> comma <> pPrint argWit)
+  pPrint (PlusWit leftWit rightWit) = text "pluswit" <> parens(pPrint leftWit <> comma <+> pPrint rightWit)
   pPrint (AVarWit avar) = text "avarwit" <> parens(text avar)
   pPrint (BangWit bangWit) = text "bangwit" <> parens(pPrint bangWit)
   pPrint (ALetWit arg argType argWit bodyWit) =
@@ -54,6 +56,8 @@ mapWitness typeFunc witFunc (LamWit var varType lamWit) =
   LamWit var (typeFunc varType) (witFunc lamWit)
 mapWitness _ witFunc (AppWit lamWit argWit) =
   AppWit (witFunc lamWit) (witFunc argWit)
+mapWitness _ witFunc (PlusWit leftWit rightWit) =
+  PlusWit (witFunc leftWit) (witFunc rightWit)
 mapWitness _ witFunc (BangWit bangWit) =
   BangWit $ witFunc bangWit
 mapWitness typeFunc witFunc (ALetWit var varType argWit bodyWit) =
@@ -70,6 +74,7 @@ data TrailBranches a = TrailBranches {
   ti :: a,
   lam :: a,
   app :: a,
+  plus :: a,
   alet :: a,
   trpl :: a
 } deriving (Eq, Show)
@@ -84,6 +89,7 @@ instance Functor TrailBranches where
       ti=f ti,
       lam=f lam,
       app=f app,
+      plus=f plus,
       alet=f alet,
       trpl=f trpl
     }
@@ -97,6 +103,7 @@ instance (Pretty a) => Pretty (TrailBranches a) where
     <+> pPrint ti <> comma
     <+> pPrint lam <> comma
     <+> pPrint app <> comma
+    <+> pPrint plus <> comma
     <+> pPrint alet <> comma
     <+> pPrint trpl
 
@@ -109,6 +116,7 @@ mapTrailBranchesM f TrailBranches{..} = do
   tiResult <- f ti
   lamResult <- f lam
   appResult <- f app
+  plusResult <- f plus
   aletResult <- f alet
   trplResult <- f trpl
   return TrailBranches {
@@ -119,6 +127,7 @@ mapTrailBranchesM f TrailBranches{..} = do
     ti = tiResult,
     lam = lamResult,
     app = appResult,
+    plus = plusResult,
     alet = aletResult,
     trpl = trplResult
   }
@@ -128,10 +137,10 @@ unzipTrailBranches branches = (fst <$> branches, snd <$> branches)
 
 trailBranchesToList :: TrailBranches a -> [a]
 trailBranchesToList TrailBranches {..} =
-  [r, t, ba, bb, ti, lam, app, alet, trpl]
+  [r, t, ba, bb, ti, lam, app, plus, alet, trpl]
 
 trailBranchesFromList :: [a] -> Maybe (TrailBranches a)
-trailBranchesFromList [r, t, ba, bb, ti, lam, app, alet, trpl] =
+trailBranchesFromList [r, t, ba, bb, ti, lam, app, plus, alet, trpl] =
   Just TrailBranches {..}
 trailBranchesFromList _ = Nothing
 
@@ -144,8 +153,9 @@ trailBranchArity = TrailBranches {
   ti = 0,
   lam = 1,
   app = 2,
+  plus = 2,
   alet = 2,
-  trpl = 9
+  trpl = 10
 }
 
 data Trail
@@ -156,6 +166,7 @@ data Trail
     | TiTrail Trail (TrailBranches Witness)
     | LamTrail String Type Trail
     | AppTrail Trail Trail
+    | PlusTrail Trail Trail
     | ALetTrail String Type Trail Trail
     | TrplTrail (TrailBranches Trail)
     deriving (Eq, Show)
@@ -180,6 +191,8 @@ instance Pretty Trail where
     text "app" <> parens(
     pPrint lamTrail <> comma
     <+> pPrint argTrail)
+  pPrint (PlusTrail leftTrail rightTrail) =
+    text "plus" <> parens(pPrint leftTrail <> comma <+> pPrint rightTrail)
   pPrint (ALetTrail arg argType argTrail bodyTrail) =
     text "alet" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argTrail <> comma
@@ -202,6 +215,8 @@ mapTrail _ trailFunc typeFunc (LamTrail var varType lamTrail) =
   LamTrail var (typeFunc varType) (trailFunc lamTrail)
 mapTrail _ trailFunc _ (AppTrail lamTrail argTrail) =
   AppTrail (trailFunc lamTrail) (trailFunc argTrail)
+mapTrail _ trailFunc _ (PlusTrail leftTrail rightTrail) =
+  PlusTrail (trailFunc leftTrail) (trailFunc rightTrail)
 mapTrail _ trailFunc typeFunc (ALetTrail var varType argTrail bodyTrail) =
   ALetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
 mapTrail _ trailFunc _ (TrplTrail branchTrails) =
@@ -221,6 +236,7 @@ data Expr
   | Brack Expr
   | Lam String Type Expr
   | App Expr Expr
+  | Plus Expr Expr
   | AVar String
   | Bang Expr Trail
   | ALet String Type Expr Expr
@@ -233,6 +249,8 @@ mapExpr f (Lam var varType bodyExpr) =
   Lam var varType (f bodyExpr)
 mapExpr f (App lamExpr argExpr) =
   App (f lamExpr) (f argExpr)
+mapExpr f (Plus leftExpr rightExpr) =
+  Plus (f leftExpr) (f rightExpr)
 mapExpr f (Bang bangExpr bangTrail) =
   Bang (f bangExpr) bangTrail
 mapExpr f (ALet var varType argExpr bodyExpr) =

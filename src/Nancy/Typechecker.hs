@@ -54,6 +54,14 @@ typecheckExpression (App left right) = do
       else throwError (Err.InvalidArgType rightType argType)
     _ ->
       throwError (Err.ExpectedLam left leftType)
+typecheckExpression plusExpr@(Plus leftExpr rightExpr) = do
+  (leftType, leftWit) <- typecheckExpression leftExpr
+  (rightType, rightWit) <- typecheckExpression rightExpr
+  case (leftType, rightType) of
+    (L.IntType, L.IntType) ->
+      return (L.IntType, L.PlusWit leftWit rightWit)
+    _ ->
+      throwError (Err.InvalidPlusArgs plusExpr)
 typecheckExpression (AVar u) = do
   (_, wEnv) <- ask
   varType <- E.loadE u (Err.ValidityVarUndefined u) wEnv
