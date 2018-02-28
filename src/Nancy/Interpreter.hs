@@ -73,6 +73,19 @@ interpretExpression plusExpr@(Plus leftExpr rightExpr) = do
   where
     updateTrailForRight leftTrail currentTrail =
       currentTrail <--> L.PlusTrail leftTrail (L.RTrail (getWit rightExpr))
+interpretExpression eqExpr@(Eq leftExpr rightExpr) = do
+  (leftVal, leftTrail) <- interpretExpression leftExpr
+  (rightVal, rightTrail) <- local (updateTrailForRight leftTrail) (interpretExpression rightExpr)
+  case (leftVal, rightVal) of
+    (IntVal leftInt, IntVal rightInt) ->
+      return (BoolVal (leftInt == rightInt), L.EqTrail leftTrail rightTrail)
+    (BoolVal leftBool, BoolVal rightBool) ->
+      return (BoolVal (leftBool == rightBool), L.EqTrail leftTrail rightTrail)
+    _ ->
+      throwError (Err.InvalidEqArgs eqExpr)
+  where
+    updateTrailForRight leftTrail currentTrail =
+      currentTrail <--> L.EqTrail leftTrail (L.RTrail (getWit rightExpr))
 interpretExpression expr@(Bang body bangTrail) = do
   (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
   return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit expr)

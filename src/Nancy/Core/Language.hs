@@ -23,6 +23,59 @@ mapType witFunc typeFunc (BangType bangType bangWit) =
   BangType (typeFunc bangType) (witFunc bangWit)
 mapType _ _ otherType = otherType
 
+newtype Program = Program Expr
+  deriving (Eq, Show)
+
+data Expr
+  = Var String
+  | Number Int
+  | Boolean Bool
+  | Brack Expr
+  | Lam String Type Expr
+  | App Expr Expr
+  | Plus Expr Expr
+  | Eq Expr Expr
+  | AVar String
+  | Bang Expr Trail
+  | ALet String Type Expr Expr
+  | Inspect (TrailBranches Expr)
+  deriving (Eq, Show)
+
+mapExpr :: (Expr -> Expr) -> Expr -> Expr
+mapExpr f (Brack brackExpr) = f brackExpr
+mapExpr f (Lam var varType bodyExpr) =
+  Lam var varType (f bodyExpr)
+mapExpr f (App lamExpr argExpr) =
+  App (f lamExpr) (f argExpr)
+mapExpr f (Plus leftExpr rightExpr) =
+  Plus (f leftExpr) (f rightExpr)
+mapExpr f (Eq leftExpr rightExpr) =
+  Eq (f leftExpr) (f rightExpr)
+mapExpr f (Bang bangExpr bangTrail) =
+  Bang (f bangExpr) bangTrail
+mapExpr f (ALet var varType argExpr bodyExpr) =
+  ALet var varType (f argExpr) (f bodyExpr)
+mapExpr f (Inspect branches) =
+  Inspect $ fmap f branches
+mapExpr _ otherExpr = otherExpr
+
+data Value
+  = IntVal Int
+  | BoolVal Bool
+  | LamVal String Type Expr
+  | VarVal String
+  | AVarVal String
+  | BangVal Value Trail
+  deriving (Eq, Show)
+
+instance Pretty Value where
+  pPrint (IntVal i) = int i
+  pPrint (BoolVal b) = text $ show b
+  pPrint (LamVal arg typ body) = parens(text arg <> colon <> pPrint typ <+> text "->" <+> text (show body))
+  pPrint (VarVal x) = text x
+  pPrint (AVarVal u) = text "<" <> text u <> text ">"
+  pPrint (BangVal value trail) = text "!" <> brackets(pPrint trail) <+> pPrint value
+
 data Witness
   = VarWit String
   | IntWit Int
@@ -30,6 +83,7 @@ data Witness
   | LamWit String Type Witness
   | AppWit Witness Witness
   | PlusWit Witness Witness
+  | EqWit Witness Witness
   | AVarWit String
   | BangWit Witness
   | ALetWit String Type Witness Witness
@@ -43,6 +97,7 @@ instance Pretty Witness where
   pPrint (LamWit arg argType bodyWit) = text "lamwit" <> parens(text arg <> colon <> pPrint argType <> comma <+> pPrint bodyWit)
   pPrint (AppWit lamWit argWit) = text "appwit" <> parens(pPrint lamWit <> comma <> pPrint argWit)
   pPrint (PlusWit leftWit rightWit) = text "pluswit" <> parens(pPrint leftWit <> comma <+> pPrint rightWit)
+  pPrint (EqWit leftWit rightWit) = text "eqwit" <> parens(pPrint leftWit <> comma <+> pPrint rightWit)
   pPrint (AVarWit avar) = text "avarwit" <> parens(text avar)
   pPrint (BangWit bangWit) = text "bangwit" <> parens(pPrint bangWit)
   pPrint (ALetWit arg argType argWit bodyWit) =
@@ -58,6 +113,8 @@ mapWitness _ witFunc (AppWit lamWit argWit) =
   AppWit (witFunc lamWit) (witFunc argWit)
 mapWitness _ witFunc (PlusWit leftWit rightWit) =
   PlusWit (witFunc leftWit) (witFunc rightWit)
+mapWitness _ witFunc (EqWit leftWit rightWit) =
+  EqWit (witFunc leftWit) (witFunc rightWit)
 mapWitness _ witFunc (BangWit bangWit) =
   BangWit $ witFunc bangWit
 mapWitness typeFunc witFunc (ALetWit var varType argWit bodyWit) =
@@ -75,6 +132,7 @@ data TrailBranches a = TrailBranches {
   lam :: a,
   app :: a,
   plus :: a,
+  eq :: a,
   alet :: a,
   trpl :: a
 } deriving (Eq, Show)
@@ -90,6 +148,7 @@ instance Functor TrailBranches where
       lam=f lam,
       app=f app,
       plus=f plus,
+      eq=f eq,
       alet=f alet,
       trpl=f trpl
     }
@@ -104,6 +163,7 @@ instance (Pretty a) => Pretty (TrailBranches a) where
     <+> pPrint lam <> comma
     <+> pPrint app <> comma
     <+> pPrint plus <> comma
+    <+> pPrint eq <> comma
     <+> pPrint alet <> comma
     <+> pPrint trpl
 
@@ -117,6 +177,7 @@ mapTrailBranchesM f TrailBranches{..} = do
   lamResult <- f lam
   appResult <- f app
   plusResult <- f plus
+  eqResult <- f plus
   aletResult <- f alet
   trplResult <- f trpl
   return TrailBranches {
@@ -128,6 +189,7 @@ mapTrailBranchesM f TrailBranches{..} = do
     lam = lamResult,
     app = appResult,
     plus = plusResult,
+    eq = eqResult,
     alet = aletResult,
     trpl = trplResult
   }
@@ -137,10 +199,10 @@ unzipTrailBranches branches = (fst <$> branches, snd <$> branches)
 
 trailBranchesToList :: TrailBranches a -> [a]
 trailBranchesToList TrailBranches {..} =
-  [r, t, ba, bb, ti, lam, app, plus, alet, trpl]
+  [r, t, ba, bb, ti, lam, app, plus, eq, alet, trpl]
 
 trailBranchesFromList :: [a] -> Maybe (TrailBranches a)
-trailBranchesFromList [r, t, ba, bb, ti, lam, app, plus, alet, trpl] =
+trailBranchesFromList [r, t, ba, bb, ti, lam, app, plus, eq, alet, trpl] =
   Just TrailBranches {..}
 trailBranchesFromList _ = Nothing
 
@@ -154,8 +216,9 @@ trailBranchArity = TrailBranches {
   lam = 1,
   app = 2,
   plus = 2,
+  eq = 2,
   alet = 2,
-  trpl = 10
+  trpl = 11
 }
 
 data Trail
@@ -167,6 +230,7 @@ data Trail
     | LamTrail String Type Trail
     | AppTrail Trail Trail
     | PlusTrail Trail Trail
+    | EqTrail Trail Trail
     | ALetTrail String Type Trail Trail
     | TrplTrail (TrailBranches Trail)
     deriving (Eq, Show)
@@ -193,6 +257,8 @@ instance Pretty Trail where
     <+> pPrint argTrail)
   pPrint (PlusTrail leftTrail rightTrail) =
     text "plus" <> parens(pPrint leftTrail <> comma <+> pPrint rightTrail)
+  pPrint (EqTrail leftTrail rightTrail) =
+    text "eq" <> parens(pPrint leftTrail <> comma <+> pPrint rightTrail)
   pPrint (ALetTrail arg argType argTrail bodyTrail) =
     text "alet" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argTrail <> comma
@@ -217,6 +283,8 @@ mapTrail _ trailFunc _ (AppTrail lamTrail argTrail) =
   AppTrail (trailFunc lamTrail) (trailFunc argTrail)
 mapTrail _ trailFunc _ (PlusTrail leftTrail rightTrail) =
   PlusTrail (trailFunc leftTrail) (trailFunc rightTrail)
+mapTrail _ trailFunc _ (EqTrail leftTrail rightTrail) =
+  EqTrail (trailFunc leftTrail) (trailFunc rightTrail)
 mapTrail _ trailFunc typeFunc (ALetTrail var varType argTrail bodyTrail) =
   ALetTrail var (typeFunc varType) (trailFunc argTrail) (trailFunc bodyTrail)
 mapTrail _ trailFunc _ (TrplTrail branchTrails) =
@@ -225,53 +293,3 @@ mapTrail _ trailFunc _ (TrplTrail branchTrails) =
 (<-->) :: Trail -> Trail -> Trail
 trailOne <--> trailTwo = TTrail trailOne trailTwo
 infixr 0 <-->
-
-newtype Program = Program Expr
-  deriving (Eq, Show)
-
-data Expr
-  = Var String
-  | Number Int
-  | Boolean Bool
-  | Brack Expr
-  | Lam String Type Expr
-  | App Expr Expr
-  | Plus Expr Expr
-  | AVar String
-  | Bang Expr Trail
-  | ALet String Type Expr Expr
-  | Inspect (TrailBranches Expr)
-  deriving (Eq, Show)
-
-mapExpr :: (Expr -> Expr) -> Expr -> Expr
-mapExpr f (Brack brackExpr) = f brackExpr
-mapExpr f (Lam var varType bodyExpr) =
-  Lam var varType (f bodyExpr)
-mapExpr f (App lamExpr argExpr) =
-  App (f lamExpr) (f argExpr)
-mapExpr f (Plus leftExpr rightExpr) =
-  Plus (f leftExpr) (f rightExpr)
-mapExpr f (Bang bangExpr bangTrail) =
-  Bang (f bangExpr) bangTrail
-mapExpr f (ALet var varType argExpr bodyExpr) =
-  ALet var varType (f argExpr) (f bodyExpr)
-mapExpr f (Inspect branches) =
-  Inspect $ fmap f branches
-mapExpr _ otherExpr = otherExpr
-
-data Value
-  = IntVal Int
-  | BoolVal Bool
-  | LamVal String Type Expr
-  | VarVal String
-  | AVarVal String
-  | BangVal Value Trail
-  deriving (Eq, Show)
-
-instance Pretty Value where
-  pPrint (IntVal i) = int i
-  pPrint (BoolVal b) = text $ show b
-  pPrint (LamVal arg typ body) = parens(text arg <> colon <> pPrint typ <+> text "->" <+> text (show body))
-  pPrint (VarVal x) = text x
-  pPrint (AVarVal u) = text "<" <> text u <> text ">"
-  pPrint (BangVal value trail) = text "!" <> brackets(pPrint trail) <+> pPrint value

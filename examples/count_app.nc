@@ -8,6 +8,7 @@ inspect {
   lam -> fun (x:int) -> x
   app -> (fun (x:int) -> fun (y:int) -> x + y + 1)
   pls -> (fun (x:int) -> fun (y:int) -> x + y)
+  eq -> (fun (x:int) -> fun (y:int) -> x + y)
   alet -> (fun (x:int) -> fun (y:int) -> x + y)
   trpl -> (
     fun (x1:int) ->
@@ -20,6 +21,7 @@ inspect {
     fun (x8:int) ->
     fun (x9:int) ->
     fun (x10:int) ->
-      x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10
+    fun (x11:int) ->
+      x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10 + x11
   )
 }

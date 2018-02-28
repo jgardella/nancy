@@ -14,6 +14,7 @@ data TypecheckError
   | BadInspectBranch Expr
   | InvalidTrailBranchList
   | InvalidPlusArgs Expr
+  | InvalidEqArgs Expr
   | PreTypecheckError String
   deriving (Eq, Show)
 
@@ -38,5 +39,7 @@ instance Pretty TypecheckError where
     text "Invalid trail branch list"
   pPrint (InvalidPlusArgs plusExpr) =
     text "Invalid plus args in expression:" <+> text (show plusExpr)
+  pPrint (InvalidEqArgs eqExpr) =
+    text "Invalid eq args in expression:" <+> text (show eqExpr)
   pPrint (PreTypecheckError err) =
     text err

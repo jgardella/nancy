@@ -22,6 +22,7 @@ import Nancy.Core.Util
   fun   { Token _ TokenFun }
   insp  { Token _ TokenInspect }
   '='   { Token _ TokenEq }
+  '=='  { Token _ TokenDoubleEq }
   '->'  { Token _ TokenArrow }
   '<'   { Token _ TokenLBrack }
   '>'   { Token _ TokenRBrack }
@@ -41,6 +42,7 @@ import Nancy.Core.Util
   lam   { Token _ TokenLAM }
   app   { Token _ TokenAPP }
   pls   { Token _ TokenPLS }
+  eq    { Token _ TokenEQ }
   trpl  { Token _ TokenTRPL }
   let   { Token _ TokenLet }
   alet  { Token _ TokenALet }
@@ -76,6 +78,7 @@ Expr      : id                                  { Var $1 }
           | Expr Expr %prec APP                 { App $1 $2 }
           | fun IdType '->' Expr                { Lam (fst $2) (snd $2) $4 }
           | Expr '+' Expr                       { Plus $1 $3 }
+          | Expr '==' Expr                      { Eq $1 $3 }
           | '<' id '>'                          { AVar $2 }
           | '!' Expr                            { Bang $2 (RTrail (getWit $2)) }
           | let Assigns in Expr                 { (unwrapLetVars $4 $2) }
@@ -89,9 +92,10 @@ Expr      : id                                  { Var $1 }
               lam '->' Expr
               app '->' Expr
               pls '->' Expr
+              eq  '->' Expr
               alet '->' Expr
               trpl '->' Expr
-            '}' { Inspect (TrailBranches $5 $8 $11 $14 $17 $20 $23 $26 $29 $32) }
+            '}' { Inspect (TrailBranches $5 $8 $11 $14 $17 $20 $23 $26 $29 $32 $35) }
 
 {
 data Assign = Assign String Type Expr

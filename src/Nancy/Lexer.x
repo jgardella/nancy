@@ -26,6 +26,7 @@ tokens :-
   inspect                         { lex' TokenInspect }
   "->"                            { lex' TokenArrow }
   "="                             { lex' TokenEq }
+  "=="                            { lex' TokenDoubleEq }
   "<"                             { lex' TokenLBrack }
   ">"                             { lex' TokenRBrack }
   "{"                             { lex' TokenLBrace }
@@ -44,6 +45,7 @@ tokens :-
   lam                             { lex' TokenLAM }
   app                             { lex' TokenAPP }
   pls                             { lex' TokenPLS }
+  eq                              { lex' TokenEQ }
   trpl                            { lex' TokenTRPL }
   alet                            { lex' TokenALet }
   let                             { lex' TokenLet }
@@ -90,6 +92,7 @@ data TokenClass
   | TokenComma
   | TokenColon
   | TokenPlus
+  | TokenDoubleEq
   | TokenR
   | TokenT
   | TokenBA
@@ -98,6 +101,7 @@ data TokenClass
   | TokenLAM
   | TokenAPP
   | TokenPLS
+  | TokenEQ
   | TokenTRPL
   | TokenALet
   | TokenLet

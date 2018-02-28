@@ -12,6 +12,7 @@ data InterpretError
   | BadTrailValue
   | InvalidTrailBranchList
   | InvalidPlusArgs Expr
+  | InvalidEqArgs Expr
   | PreInterpretError String
   deriving (Eq, Show)
 
@@ -28,6 +29,8 @@ instance Pretty InterpretError where
     text "Bad trail value"
   pPrint (InvalidPlusArgs plusExpr) =
     text "Invalid plus args in expression:" <+> text (show plusExpr)
+  pPrint (InvalidEqArgs eqExpr) =
+    text "Invalid eq args in expression:" <+> text (show eqExpr)
   pPrint InvalidTrailBranchList =
     text "Invalid trail branch list"
   pPrint (PreInterpretError err) =
