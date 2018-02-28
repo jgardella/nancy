@@ -71,6 +71,8 @@ Type      : int                                 { IntType }
           | Type '->' Type                      { LamType $1 $3 }
           | '(' Type ')'                        { $2 }
 IdType    : '(' id ':' Type ')'                 { ($2, $4) }
+IdTypes   : IdType                              { [$1] }
+          | IdType IdTypes                      { $1 : $2 }
 Assign    : IdType '=' Expr                     { Assign (fst $1) (snd $1) $3 }
 Assigns   : Assign                              { [$1] }
           | Assign ',' Assigns                  { $1 : $3 }
@@ -80,7 +82,7 @@ Expr      : id                                  { Var $1 }
           | false                               { Boolean False }
           | '(' Expr ')'                        { Brack $2 }
           | Expr Expr %prec APP                 { App $1 $2 }
-          | fun IdType '->' Expr                { Lam (fst $2) (snd $2) $4 }
+          | fun IdTypes '->' Expr               { (unwrapLam $2 $4) }
           | Expr '+' Expr                       { Plus $1 $3 }
           | Expr '==' Expr                      { Eq $1 $3 }
           | if Expr then Expr else Expr         { Ite $2 $4 $6 }
@@ -105,6 +107,12 @@ Expr      : id                                  { Var $1 }
 
 {
 data Assign = Assign String Type Expr
+
+unwrapLam :: [(String, Type)] -> Expr -> Expr
+unwrapLam ((var, varType):vars) bodyExpr =
+  Lam var varType (unwrapLam vars bodyExpr)
+unwrapLam [] bodyExpr =
+  bodyExpr
 
 unwrapALetVars :: Expr -> [Assign] -> Expr
 unwrapALetVars body ((Assign var varType varExpr):vars) =
