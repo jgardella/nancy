@@ -72,6 +72,18 @@ typecheckExpression eqExpr@(Eq leftExpr rightExpr) = do
       return (L.BoolType, L.EqWit leftWit rightWit)
     _ ->
       throwError (Err.InvalidEqArgs eqExpr)
+typecheckExpression (Ite condExpr thenExpr elseExpr) = do
+  (condType, condWit) <- typecheckExpression condExpr
+  case condType of
+    L.BoolType -> do
+      (thenType, thenWit) <- typecheckExpression thenExpr
+      (elseType, elseWit) <- typecheckExpression elseExpr
+      if thenType == elseType then
+        return (thenType, L.IteWit condWit thenWit elseWit)
+      else
+        throwError (Err.InvalidIfBranches thenExpr thenType elseExpr elseType)
+    _ ->
+      throwError (Err.InvalidIfCond condExpr condType)
 typecheckExpression (AVar u) = do
   (_, wEnv) <- ask
   varType <- E.loadE u (Err.ValidityVarUndefined u) wEnv

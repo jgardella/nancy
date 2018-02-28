@@ -15,6 +15,8 @@ data TypecheckError
   | InvalidTrailBranchList
   | InvalidPlusArgs Expr
   | InvalidEqArgs Expr
+  | InvalidIfCond Expr Type
+  | InvalidIfBranches Expr Type Expr Type
   | PreTypecheckError String
   deriving (Eq, Show)
 
@@ -41,5 +43,12 @@ instance Pretty TypecheckError where
     text "Invalid plus args in expression:" <+> text (show plusExpr)
   pPrint (InvalidEqArgs eqExpr) =
     text "Invalid eq args in expression:" <+> text (show eqExpr)
+  pPrint (InvalidIfCond condExpr condType) =
+    text "If condition must have type boolean, but expression" <+> text (show condExpr)
+    <+> text "has type" <+> pPrint condType
+  pPrint (InvalidIfBranches thenExpr thenType elseExpr elseType) =
+    text "If branches must have same type, but then branch has expression"
+      <+> text (show thenExpr) <+> text "with type" <+> pPrint thenType
+      <+> text "and else branch has expression" <+> text (show elseExpr) <+> text "with type" <+> pPrint elseType
   pPrint (PreTypecheckError err) =
     text err

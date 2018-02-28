@@ -86,6 +86,22 @@ interpretExpression eqExpr@(Eq leftExpr rightExpr) = do
   where
     updateTrailForRight leftTrail currentTrail =
       currentTrail <--> L.EqTrail leftTrail (L.RTrail (getWit rightExpr))
+interpretExpression (Ite condExpr thenExpr elseExpr) = do
+  (condVal, condTrail) <- interpretExpression condExpr
+  (thenVal, thenTrail) <- local (updateTrailForThen condTrail) (interpretExpression thenExpr)
+  (elseVal, elseTrail) <- local (updateTrailForElse condTrail thenTrail) (interpretExpression elseExpr)
+  case condVal of
+    (L.BoolVal bool) | bool ->
+      return (thenVal, L.IteTrail condTrail thenTrail elseTrail)
+    (L.BoolVal _) ->
+      return (elseVal, L.IteTrail condTrail thenTrail elseTrail)
+    _ ->
+      throwError (Err.InvalidIfCond condExpr condVal)
+  where
+    updateTrailForThen condTrail currentTrail =
+      currentTrail <--> L.IteTrail condTrail (L.RTrail (getWit thenExpr)) (L.RTrail (getWit elseExpr))
+    updateTrailForElse condTrail thenTrail currentTrail =
+      currentTrail <--> L.IteTrail condTrail thenTrail (L.RTrail (getWit elseExpr))
 interpretExpression expr@(Bang body bangTrail) = do
   (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
   return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit expr)
