@@ -261,7 +261,7 @@ data Trail
 
 instance Pretty Trail where
   pPrint (RTrail wit) = text "r" <> parens(pPrint wit)
-  pPrint (TTrail trail1 trail2) = pPrint trail1 <> semi <> pPrint trail2
+  pPrint (TTrail trail1 trail2) = pPrint trail1 <> semi $$ pPrint trail2
   pPrint (BaTrail arg argType argWit bodyWit) =
     text "ba" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argWit <> comma
