@@ -14,7 +14,7 @@ data Mode = Parse
 
 data Args = Args
   { mode :: Mode
-  , pretty :: Bool
+  , printShow :: Bool
   , source :: String }
 
 parseMode :: Parser Mode
@@ -24,15 +24,15 @@ parseMode = option auto
             <> metavar "MODE"
             <> value Interpret )
 
-parsePretty :: Parser Bool
-parsePretty = switch
-              ( long "pretty"
-              <> short 'p' )
+parseShow :: Parser Bool
+parseShow = switch
+              ( long "show"
+              <> short 's' )
 
 parseArgs :: Parser Args
 parseArgs = Args
          <$> parseMode
-         <*> parsePretty
+         <*> parseShow
          <*> argument str (metavar "FILE" <> value "<stdin>")
 
 opts :: ParserInfo Args
@@ -58,10 +58,10 @@ evalPrint' args input =
 
 print' :: (Show a, Pretty a) => Args -> a -> IO ()
 print' args output =
-  if pretty args then
-    putStrLn $ prettyShow output
-  else
+  if printShow args then
     print output
+  else
+    putStrLn $ prettyShow output
 
 repl :: Args -> IO ()
 repl args = do
