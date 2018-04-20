@@ -57,10 +57,10 @@ interpretExpression (App lam arg) = do
     updateTrailForBody lamTrail argTrail var varType currentTrail =
       currentTrail
       <--> L.AppTrail lamTrail argTrail
-      <--> L.BaTrail var varType (getTarget lamTrail) (getTarget argTrail)
+      <--> L.BaTrail var varType (getTarget argTrail) (getTarget lamTrail)
     getReturnTrail lamTrail argTrail var varType resultTrail =
       L.AppTrail lamTrail argTrail
-      <--> L.BaTrail var varType (getTarget lamTrail) (getTarget argTrail)
+      <--> L.BaTrail var varType (getTarget argTrail) (getTarget lamTrail)
       <--> resultTrail
 interpretExpression plusExpr@(Plus leftExpr rightExpr) = do
   (leftVal, leftTrail) <- interpretExpression leftExpr
