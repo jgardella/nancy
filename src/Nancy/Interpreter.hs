@@ -104,11 +104,11 @@ interpretExpression (Ite condExpr thenExpr elseExpr) = do
       currentTrail <--> L.IteTrail condTrail thenTrail (L.RTrail (getWit elseExpr))
 interpretExpression expr@(Bang body bangTrail) = do
   (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
-  return (BangVal bodyVal (L.TTrail bangTrail bodyTrail), L.RTrail $ getWit expr)
+  return (BangVal bodyVal (TrailWithMode (Standard, L.TTrail bangTrail bodyTrail)), L.RTrail $ getWit expr)
 interpretExpression (ALet letVar letVarType letArg letBody) = do
   (argValue, argTrail) <- interpretExpression letArg
   case argValue of
-    (L.BangVal bangVal bangTrail) -> do
+    (L.BangVal bangVal (TrailWithMode (_, bangTrail))) -> do
       (resultVal, resultTrail) <-
         local (updateTrailForBody argTrail bangTrail bangVal)
           (interpretExpression (termSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody))

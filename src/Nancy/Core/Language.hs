@@ -68,8 +68,13 @@ data Value
   | LamVal String Type Expr
   | VarVal String
   | AVarVal String
-  | BangVal Value Trail
+  | BangVal Value TrailWithMode
   deriving (Eq, Show)
+
+setValueTrailMode :: TrailMode -> Value -> Value
+setValueTrailMode trailMode (BangVal value (TrailWithMode (_, trail))) =
+  BangVal (setValueTrailMode trailMode value) (TrailWithMode (trailMode, trail))
+setValueTrailMode _ value = value
 
 instance Pretty Value where
   pPrint (IntVal i) = int i
@@ -245,52 +250,115 @@ trailBranchArity = TrailBranches {
 }
 
 data Trail
-    = RTrail Witness
-    | TTrail Trail Trail
-    | BaTrail String Type Witness Witness
-    | BbTrail String Type Witness Witness
-    | TiTrail Trail (TrailBranches Witness)
-    | LamTrail String Type Trail
-    | AppTrail Trail Trail
-    | PlusTrail Trail Trail
-    | EqTrail Trail Trail
-    | IteTrail Trail Trail Trail
-    | ALetTrail String Type Trail Trail
-    | TrplTrail (TrailBranches Trail)
-    deriving (Eq, Show)
+  = RTrail Witness
+  | TTrail Trail Trail
+  | BaTrail String Type Witness Witness
+  | BbTrail String Type Witness Witness
+  | TiTrail Trail (TrailBranches Witness)
+  | LamTrail String Type Trail
+  | AppTrail Trail Trail
+  | PlusTrail Trail Trail
+  | EqTrail Trail Trail
+  | IteTrail Trail Trail Trail
+  | ALetTrail String Type Trail Trail
+  | TrplTrail (TrailBranches Trail)
+  deriving (Eq, Show)
 
-instance Pretty Trail where
-  pPrint (RTrail wit) = text "r" <> parens(pPrint wit)
-  pPrint (TTrail trail1 trail2) = pPrint trail1 <> semi $$ pPrint trail2
-  pPrint (BaTrail arg argType argWit bodyWit) =
+data TrailMode
+  = Standard
+  | Prose
+  deriving (Eq, Show)
+
+newtype TrailWithMode = TrailWithMode (TrailMode, Trail)
+  deriving (Eq, Show)
+
+instance Pretty TrailWithMode where
+  -- Standard Trail
+  pPrint (TrailWithMode (Standard, RTrail wit)) = text "r" <> parens(pPrint wit)
+  pPrint (TrailWithMode (Standard, TTrail trail1 trail2)) = pPrint (TrailWithMode (Standard, trail1)) <> semi $$ pPrint (TrailWithMode (Standard, trail2))
+  pPrint (TrailWithMode (Standard, BaTrail arg argType argWit bodyWit)) =
     text "ba" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argWit <> comma
     <+> pPrint bodyWit)
-  pPrint (BbTrail arg argType argWit bodyWit) =
+  pPrint (TrailWithMode (Standard, BbTrail arg argType argWit bodyWit)) =
     text "bb" <> parens(
     text arg <> colon <> pPrint argType <> comma <+> pPrint argWit <> comma
     <+> pPrint bodyWit)
-  pPrint (TiTrail _ branches) =
+  pPrint (TrailWithMode (Standard, TiTrail _ branches)) =
     text "ti" <> parens(pPrint branches)
-  pPrint (LamTrail arg argType bodyTrail) =
+  pPrint (TrailWithMode (Standard, LamTrail arg argType bodyTrail)) =
     text "lam" <> parens(
-    text arg <> colon <> pPrint argType <> comma <+> pPrint bodyTrail)
-  pPrint (AppTrail lamTrail argTrail) =
+    text arg <> colon <> pPrint argType <> comma <+> pPrint (TrailWithMode (Standard, bodyTrail)))
+  pPrint (TrailWithMode (Standard, AppTrail lamTrail argTrail)) =
     text "app" <> parens(
-    pPrint lamTrail <> comma
-    <+> pPrint argTrail)
-  pPrint (PlusTrail leftTrail rightTrail) =
-    text "plus" <> parens(pPrint leftTrail <> comma <+> pPrint rightTrail)
-  pPrint (EqTrail leftTrail rightTrail) =
-    text "eq" <> parens(pPrint leftTrail <> comma <+> pPrint rightTrail)
-  pPrint (IteTrail condTrail thenTrail elseTrail) =
-    text "ite" <> parens(pPrint condTrail <> comma <+> pPrint thenTrail <> comma <+> pPrint elseTrail)
-  pPrint (ALetTrail arg argType argTrail bodyTrail) =
+    pPrint (TrailWithMode (Standard, lamTrail)) <> comma
+    <+> pPrint (TrailWithMode (Standard, argTrail)))
+  pPrint (TrailWithMode (Standard, PlusTrail leftTrail rightTrail)) =
+    text "plus" <> parens(pPrint (TrailWithMode (Standard, leftTrail)) <> comma <+> pPrint (TrailWithMode (Standard, rightTrail)))
+  pPrint (TrailWithMode (Standard, EqTrail leftTrail rightTrail)) =
+    text "eq" <> parens(pPrint (TrailWithMode (Standard, leftTrail)) <> comma <+> pPrint (TrailWithMode (Standard, rightTrail)))
+  pPrint (TrailWithMode (Standard, IteTrail condTrail thenTrail elseTrail)) =
+    text "ite" <> parens(pPrint (TrailWithMode (Standard, condTrail))
+    <> comma <+> pPrint (TrailWithMode (Standard, thenTrail))
+    <> comma <+> pPrint (TrailWithMode (Standard, elseTrail)))
+  pPrint (TrailWithMode (Standard, ALetTrail arg argType argTrail bodyTrail)) =
     text "alet" <> parens(
-    text arg <> colon <> pPrint argType <> comma <+> pPrint argTrail <> comma
-    <+> pPrint bodyTrail)
-  pPrint (TrplTrail branches) =
-    text "trpl" <> parens(pPrint branches)
+    text arg <> colon <> pPrint argType <> comma <+> pPrint (TrailWithMode (Standard, argTrail)) <> comma
+    <+> pPrint (TrailWithMode (Standard, bodyTrail)))
+  pPrint (TrailWithMode (Standard, TrplTrail branches)) =
+    text "trpl" <> parens(pPrint (fmap (\trail -> TrailWithMode (Standard, trail)) branches))
+  -- Prose Trail
+  pPrint (TrailWithMode (Prose, RTrail wit)) = text "We witness" <+> pPrint wit
+  pPrint (TrailWithMode (Prose, TTrail trail1 trail2)) = pPrint (TrailWithMode (Prose, trail1)) $$ pPrint (TrailWithMode (Prose, trail2))
+  pPrint (TrailWithMode (Prose, BaTrail arg argType argWit bodyWit)) =
+    text "We perform a beta step, substituting the formal parameter" <+> parens(text arg <> colon <> pPrint argType)
+    <+> text "with" <+> pPrint argWit <+> text "in" <+> pPrint bodyWit
+  pPrint (TrailWithMode (Prose, BbTrail arg argType argWit bodyWit)) =
+    text "We perform a beta-box step, substituting the audited formal parameter" <+> parens(text arg <> colon <> pPrint argType)
+    <+> text "with" <+> pPrint argWit <+> text "in" <+> pPrint bodyWit
+  pPrint (TrailWithMode (Prose, TiTrail _ _)) =
+    text "We perform a trail inspection"
+  pPrint (TrailWithMode (Prose, LamTrail arg argType bodyTrail)) = vcat [
+      text "We reduce the body of a lambda with formal parameter" <+> parens(text arg <> colon <> pPrint argType) <> colon,
+      nest 2 (pPrint (TrailWithMode (Prose, bodyTrail)))
+    ]
+  pPrint (TrailWithMode (Prose, AppTrail lamTrail argTrail)) = vcat [
+      text "We reduce under an application, reducing the left term:",
+      nest 2 (pPrint (TrailWithMode (Prose, lamTrail))),
+      text "and the right term:",
+      nest 2 (pPrint (TrailWithMode (Prose, argTrail)))
+    ]
+  pPrint (TrailWithMode (Prose, PlusTrail leftTrail rightTrail)) = vcat [
+      text "We reduce under a plus, reducing the left term:",
+      nest 2 (pPrint (TrailWithMode (Prose, leftTrail))),
+      text "and the right term:",
+      nest 2 (pPrint (TrailWithMode (Prose, rightTrail)))
+    ]
+  pPrint (TrailWithMode (Prose, EqTrail leftTrail rightTrail)) = vcat [
+      text "We reduce under an equals, reducing the left term:",
+      nest 2 (pPrint (TrailWithMode (Prose, leftTrail))),
+      text "and the right term:",
+      nest 2 (pPrint (TrailWithMode (Prose, rightTrail)))
+    ]
+  pPrint (TrailWithMode (Prose, IteTrail condTrail thenTrail elseTrail)) = vcat [
+      text "We reduce under an if-then-else, reducing the condition term:",
+      nest 2 (pPrint (TrailWithMode (Prose, condTrail))),
+      text "the then term:",
+      nest 2 (pPrint (TrailWithMode (Prose, thenTrail))),
+      text "and the else term:",
+      nest 2 (pPrint (TrailWithMode (Prose, elseTrail)))
+    ]
+  pPrint (TrailWithMode (Prose, ALetTrail arg argType argTrail bodyTrail)) = vcat [
+      text "We reduce under an audited let with audited formal parameter"
+      <+> parens(text arg <> colon <> pPrint argType) <> comma <+> text "reducing the argument term:",
+      nest 2 (pPrint (TrailWithMode (Prose, argTrail))),
+      text "and the body term:",
+      nest 2 (pPrint (TrailWithMode (Prose, bodyTrail)))
+    ]
+  pPrint (TrailWithMode (Prose, TrplTrail branches)) = vcat [
+      text "We reduce under a trail replacement, with the trails:",
+      nest 2 (pPrint (fmap (\trail -> TrailWithMode (Prose, trail)) branches))
+    ]
 
 mapTrail :: (Witness -> Witness) -> (Trail -> Trail) -> (Type -> Type) -> Trail -> Trail
 mapTrail witFunc _ _ (RTrail rWit) =

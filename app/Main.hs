@@ -15,6 +15,7 @@ data Mode = Parse
 data Args = Args
   { mode :: Mode
   , printShow :: Bool
+  , proseTrail :: Bool
   , source :: String }
 
 parseMode :: Parser Mode
@@ -26,13 +27,17 @@ parseMode = option auto
 
 parseShow :: Parser Bool
 parseShow = switch
-              ( long "show"
-              <> short 's' )
+            ( long "show"
+            <> short 's' )
+
+parseProse :: Parser Bool
+parseProse = switch $ long "prose"
 
 parseArgs :: Parser Args
 parseArgs = Args
          <$> parseMode
          <*> parseShow
+         <*> parseProse
          <*> argument str (metavar "FILE" <> value "<stdin>")
 
 opts :: ParserInfo Args
@@ -54,7 +59,7 @@ evalPrint' args input =
     Typecheck ->
       print' args $ parseTypecheck (source args) input
     Interpret ->
-      print' args $ parseTypecheckInterpret (source args) input
+      print' args $ parseTypecheckInterpret (proseTrail args) (source args) input
 
 print' :: (Show a, Pretty a) => Args -> a -> IO ()
 print' args output =

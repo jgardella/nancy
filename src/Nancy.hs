@@ -33,13 +33,17 @@ parseTypecheckWithEnv source input env =
     (ParseFailure err) ->
       TypecheckFailure $ PreTypecheckError err
 
-parseTypecheckInterpret :: FilePath -> String -> InterpreterOutput
-parseTypecheckInterpret source input =
+parseTypecheckInterpret :: Bool -> FilePath -> String -> InterpreterOutput
+parseTypecheckInterpret prose source input =
   case parse source input of
     (ParseSuccess parseResult) ->
       case typecheckProgram (Env.empty, Env.empty) parseResult of
         (TypecheckSuccess _) ->
-          interpretProgram parseResult
+          case interpretProgram parseResult of
+            (InterpretSuccess (value, logs)) ->
+              let trailMode = if prose then Prose else Standard in
+                InterpretSuccess (setValueTrailMode trailMode value, logs)
+            (InterpretFailure errs) -> InterpretFailure errs
         (TypecheckFailure err) ->
           InterpretFailure (PreInterpretError (prettyShow err), [])
     (ParseFailure err) ->

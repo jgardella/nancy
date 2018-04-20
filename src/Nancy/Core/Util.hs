@@ -38,7 +38,7 @@ valueToExpr (L.BoolVal b) = L.Boolean b
 valueToExpr (L.VarVal x) = L.Var x
 valueToExpr (L.AVarVal x) = L.AVar x
 valueToExpr (L.LamVal arg argType body) = L.Lam arg argType body
-valueToExpr (L.BangVal bodyVal trail) = L.Bang (valueToExpr bodyVal) trail
+valueToExpr (L.BangVal bodyVal (L.TrailWithMode (_, trail))) = L.Bang (valueToExpr bodyVal) trail
 
 valueSubOverVar :: L.Value -> String -> L.Expr -> L.Expr
 valueSubOverVar value var same@(L.Var x)
