@@ -17,11 +17,12 @@ instance Pretty Type where
   pPrint (BangType bodyType witness) = pPrint bodyType <+> brackets(pPrint witness)
 
 mapType :: (Witness -> Witness) -> (Type -> Type) -> Type -> Type
+mapType _ _ IntType = IntType
+mapType _ _ BoolType = BoolType
 mapType _ typeFunc (LamType argType returnType) =
   LamType (typeFunc argType) (typeFunc returnType)
 mapType witFunc typeFunc (BangType bangType bangWit) =
   BangType (typeFunc bangType) (witFunc bangWit)
-mapType _ _ otherType = otherType
 
 newtype Program = Program Expr
   deriving (Eq, Show)
@@ -43,6 +44,9 @@ data Expr
   deriving (Eq, Show)
 
 mapExpr :: (Expr -> Expr) -> Expr -> Expr
+mapExpr _ expr@Var{} = expr
+mapExpr _ expr@Number{} = expr
+mapExpr _ expr@Boolean{} = expr
 mapExpr f (Brack brackExpr) = f brackExpr
 mapExpr f (Lam var varType bodyExpr) =
   Lam var varType (f bodyExpr)
@@ -54,13 +58,13 @@ mapExpr f (Eq leftExpr rightExpr) =
   Eq (f leftExpr) (f rightExpr)
 mapExpr f (Ite condExpr trueExpr falseExpr) =
   Ite (f condExpr) (f trueExpr) (f falseExpr)
+mapExpr _ expr@AVar{} = expr
 mapExpr f (Bang bangExpr bangTrail) =
   Bang (f bangExpr) bangTrail
 mapExpr f (ALet var varType argExpr bodyExpr) =
   ALet var varType (f argExpr) (f bodyExpr)
 mapExpr f (Inspect branches) =
   Inspect $ fmap f branches
-mapExpr _ otherExpr = otherExpr
 
 data Value
   = IntVal Int
@@ -127,6 +131,9 @@ instance Pretty Witness where
     text "tiwit" <> parens(pPrint branches)
 
 mapWitness :: (Type -> Type) -> (Witness -> Witness) -> Witness -> Witness
+mapWitness _ _ wit@VarWit{} = wit
+mapWitness _ _ wit@IntWit{} = wit
+mapWitness _ _ wit@BoolWit{} = wit
 mapWitness typeFunc witFunc (LamWit var varType lamWit) =
   LamWit var (typeFunc varType) (witFunc lamWit)
 mapWitness _ witFunc (AppWit lamWit argWit) =
@@ -137,13 +144,13 @@ mapWitness _ witFunc (EqWit leftWit rightWit) =
   EqWit (witFunc leftWit) (witFunc rightWit)
 mapWitness _ witFunc (IteWit condWit trueWit falseWit) =
   IteWit (witFunc condWit) (witFunc trueWit) (witFunc falseWit)
+mapWitness _ _ wit@AVarWit{} = wit
 mapWitness _ witFunc (BangWit bangWit) =
   BangWit $ witFunc bangWit
 mapWitness typeFunc witFunc (ALetWit var varType argWit bodyWit) =
   ALetWit var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
 mapWitness typeFunc witFunc (TiWit branchWits) =
   TiWit $ fmap (mapWitness typeFunc witFunc) branchWits
-mapWitness _ _ otherWitness = otherWitness
 
 data TrailBranches a = TrailBranches {
   r :: a,
