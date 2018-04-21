@@ -1,4 +1,4 @@
-inspect {
+!inspect {
   r -> 0
   t -> fun (t1:int) (t2:int) ->
     t1 + t2
