@@ -17,37 +17,37 @@ runInterpretM :: InterpretEnv -> InterpretM -> (Either Err.InterpretError (Value
 runInterpretM env m = runIdentity (runWriterT (runExceptT (runReaderT m env)))
 
 interpretProgram :: Program -> InterpreterOutput
-interpretProgram (Program expr) =
+interpretProgram (Program term) =
   processResult
-  $ runInterpretM unusedInitialTrail (interpretExpression expr)
+  $ runInterpretM unusedInitialTrail (interpretTerm term)
   where
-    unusedInitialTrail = L.RTrail $ L.IntWit 0
+    unusedInitialTrail = L.RTrail $ L.Number 0
     processResult (result, logs) =
       case result of
         (Right (value, _)) -> InterpretSuccess (value, logs)
         (Left err) -> InterpretFailure (err, logs)
 
-interpretExpression :: Expr -> InterpretM
-interpretExpression (Number n) =
-  return (IntVal n, L.RTrail $ L.IntWit n)
-interpretExpression (Boolean b) =
-  return (BoolVal b, L.RTrail $ L.BoolWit b)
-interpretExpression (Brack expr) =
-  interpretExpression expr
-interpretExpression (Var x) =
-  return (VarVal x, L.RTrail $ L.VarWit x)
-interpretExpression (AVar u) =
-  return (AVarVal u, L.RTrail $ L.AVarWit u)
-interpretExpression expr@(Lam arg argType body) =
-  return (LamVal arg argType body, L.RTrail $ getWit expr)
-interpretExpression (App lam arg) = do
-  (lamVal, lamTrail) <- interpretExpression lam
+interpretTerm :: Term -> InterpretM
+interpretTerm (Number n) =
+  return (IntVal n, L.RTrail $ L.Number n)
+interpretTerm (Boolean b) =
+  return (BoolVal b, L.RTrail $ L.Boolean b)
+interpretTerm (Brack term) =
+  interpretTerm term
+interpretTerm (Var x) =
+  return (VarVal x, L.RTrail $ L.Var x)
+interpretTerm (AVar u) =
+  return (AVarVal u, L.RTrail $ L.AVar u)
+interpretTerm term@(Lam arg argType body) =
+  return (LamVal arg argType body, L.RTrail $ getWit term)
+interpretTerm (App lam arg) = do
+  (lamVal, lamTrail) <- interpretTerm lam
   case lamVal of
     (LamVal var varType body) -> do
-      (argVal, argTrail) <- local (updateTrailForArg lamTrail arg) (interpretExpression arg)
+      (argVal, argTrail) <- local (updateTrailForArg lamTrail arg) (interpretTerm arg)
       (result, resultTrail) <-
         local (updateTrailForBody lamTrail argTrail var varType)
-          (interpretExpression (valueSubOverVar argVal var body))
+          (interpretTerm (valueSubOverVar argVal var body))
       return (result, getReturnTrail lamTrail argTrail var varType resultTrail)
     _ ->
       throwError (Err.ExpectedLam lamVal)
@@ -62,56 +62,56 @@ interpretExpression (App lam arg) = do
       L.AppTrail lamTrail argTrail
       <--> L.BaTrail var varType (getTarget argTrail) (getTarget lamTrail)
       <--> resultTrail
-interpretExpression plusExpr@(Plus leftExpr rightExpr) = do
-  (leftVal, leftTrail) <- interpretExpression leftExpr
-  (rightVal, rightTrail) <- local (updateTrailForRight leftTrail) (interpretExpression rightExpr)
+interpretTerm plusTerm@(Plus leftTerm rightTerm) = do
+  (leftVal, leftTrail) <- interpretTerm leftTerm
+  (rightVal, rightTrail) <- local (updateTrailForRight leftTrail) (interpretTerm rightTerm)
   case (leftVal, rightVal) of
     (IntVal leftInt, IntVal rightInt) ->
       return (IntVal (leftInt + rightInt), L.PlusTrail leftTrail rightTrail)
     _ ->
-      throwError (Err.InvalidPlusArgs plusExpr)
+      throwError (Err.InvalidPlusArgs plusTerm)
   where
     updateTrailForRight leftTrail currentTrail =
-      currentTrail <--> L.PlusTrail leftTrail (L.RTrail (getWit rightExpr))
-interpretExpression eqExpr@(Eq leftExpr rightExpr) = do
-  (leftVal, leftTrail) <- interpretExpression leftExpr
-  (rightVal, rightTrail) <- local (updateTrailForRight leftTrail) (interpretExpression rightExpr)
+      currentTrail <--> L.PlusTrail leftTrail (L.RTrail (getWit rightTerm))
+interpretTerm eqTerm@(Eq leftTerm rightTerm) = do
+  (leftVal, leftTrail) <- interpretTerm leftTerm
+  (rightVal, rightTrail) <- local (updateTrailForRight leftTrail) (interpretTerm rightTerm)
   case (leftVal, rightVal) of
     (IntVal leftInt, IntVal rightInt) ->
       return (BoolVal (leftInt == rightInt), L.EqTrail leftTrail rightTrail)
     (BoolVal leftBool, BoolVal rightBool) ->
       return (BoolVal (leftBool == rightBool), L.EqTrail leftTrail rightTrail)
     _ ->
-      throwError (Err.InvalidEqArgs eqExpr)
+      throwError (Err.InvalidEqArgs eqTerm)
   where
     updateTrailForRight leftTrail currentTrail =
-      currentTrail <--> L.EqTrail leftTrail (L.RTrail (getWit rightExpr))
-interpretExpression (Ite condExpr thenExpr elseExpr) = do
-  (condVal, condTrail) <- interpretExpression condExpr
-  (thenVal, thenTrail) <- local (updateTrailForThen condTrail) (interpretExpression thenExpr)
-  (elseVal, elseTrail) <- local (updateTrailForElse condTrail thenTrail) (interpretExpression elseExpr)
+      currentTrail <--> L.EqTrail leftTrail (L.RTrail (getWit rightTerm))
+interpretTerm (Ite condTerm thenTerm elseTerm) = do
+  (condVal, condTrail) <- interpretTerm condTerm
+  (thenVal, thenTrail) <- local (updateTrailForThen condTrail) (interpretTerm thenTerm)
+  (elseVal, elseTrail) <- local (updateTrailForElse condTrail thenTrail) (interpretTerm elseTerm)
   case condVal of
     (L.BoolVal bool) | bool ->
       return (thenVal, L.IteTrail condTrail thenTrail elseTrail)
     (L.BoolVal _) ->
       return (elseVal, L.IteTrail condTrail thenTrail elseTrail)
     _ ->
-      throwError (Err.InvalidIfCond condExpr condVal)
+      throwError (Err.InvalidIfCond condTerm condVal)
   where
     updateTrailForThen condTrail currentTrail =
-      currentTrail <--> L.IteTrail condTrail (L.RTrail (getWit thenExpr)) (L.RTrail (getWit elseExpr))
+      currentTrail <--> L.IteTrail condTrail (L.RTrail (getWit thenTerm)) (L.RTrail (getWit elseTerm))
     updateTrailForElse condTrail thenTrail currentTrail =
-      currentTrail <--> L.IteTrail condTrail thenTrail (L.RTrail (getWit elseExpr))
-interpretExpression expr@(Bang body bangTrail) = do
-  (bodyVal, bodyTrail) <- local (const bangTrail) (interpretExpression body)
-  return (BangVal bodyVal (TrailWithMode (Standard, L.TTrail bangTrail bodyTrail)), L.RTrail $ getWit expr)
-interpretExpression (ALet letVar letVarType letArg letBody) = do
-  (argValue, argTrail) <- interpretExpression letArg
+      currentTrail <--> L.IteTrail condTrail thenTrail (L.RTrail (getWit elseTerm))
+interpretTerm term@(Bang body bangTrail) = do
+  (bodyVal, bodyTrail) <- local (const bangTrail) (interpretTerm body)
+  return (BangVal bodyVal (TrailWithMode (Standard, L.TTrail bangTrail bodyTrail)), L.RTrail $ getWit term)
+interpretTerm (ALet letVar letVarType letArg letBody) = do
+  (argValue, argTrail) <- interpretTerm letArg
   case argValue of
     (L.BangVal bangVal (TrailWithMode (_, bangTrail))) -> do
       (resultVal, resultTrail) <-
         local (updateTrailForBody argTrail bangTrail bangVal)
-          (interpretExpression (termSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody))
+          (interpretTerm (termSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody))
       return (resultVal, getReturnTrail argTrail bangTrail bangVal resultTrail)
     _ -> throwError (Err.ExpectedBang argValue)
   where
@@ -125,11 +125,11 @@ interpretExpression (ALet letVar letVarType letArg letBody) = do
       <--> L.BbTrail letVar letVarType (getSource bangTrail) (getWit letBody)
       <--> trailSubOverAVar bangTrail letVar bangVal (getSource bangTrail) letBody
       <--> resultTrail
-interpretExpression (Inspect branches) = do
+interpretTerm (Inspect branches) = do
   currentTrail <- ask
   (branchValues, trplTrail) <- interpretBranches
-  let foldExpr = foldTrailToTerm (valueToExpr <$> branchValues) (addTrplTrail trplTrail currentTrail)
-  (foldValue, foldTrail) <- local (addTrplTrail trplTrail) (interpretExpression foldExpr)
+  let foldTerm = foldTrailToExpr (valueToTerm <$> branchValues) (addTrplTrail trplTrail currentTrail)
+  (foldValue, foldTrail) <- local (addTrplTrail trplTrail) (interpretTerm foldTerm)
   return (foldValue, getResultTrail trplTrail foldTrail currentTrail)
   where
     baseTrailList = trailBranchesToList (L.RTrail . getWit <$> branches)
@@ -141,7 +141,7 @@ interpretExpression (Inspect branches) = do
           maybeTrplTrail = trailBranchesFromList trailBranchList
       case maybeTrplTrail of
         (Just trplTrail) -> do
-          (branchValue, branchTrail) <- local (addTrplTrail trplTrail) (interpretExpression branch)
+          (branchValue, branchTrail) <- local (addTrplTrail trplTrail) (interpretTerm branch)
           return (values ++ [branchValue], trails ++ [branchTrail])
         Nothing ->
           throwError Err.InvalidTrailBranchList

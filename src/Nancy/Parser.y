@@ -106,21 +106,21 @@ Expr      : id                                  { Var $1 }
             '}' { Inspect (TrailBranches $5 $8 $11 $14 $17 $20 $23 $26 $29 $32 $35 $38) }
 
 {
-data Assign = Assign String Type Expr
+data Assign = Assign String Type Term
 
-unwrapLam :: [(String, Type)] -> Expr -> Expr
-unwrapLam ((var, varType):vars) bodyExpr =
-  Lam var varType (unwrapLam vars bodyExpr)
-unwrapLam [] bodyExpr =
-  bodyExpr
+unwrapLam :: [(String, Type)] -> Term -> Term
+unwrapLam ((var, varType):vars) bodyTerm =
+  Lam var varType (unwrapLam vars bodyTerm)
+unwrapLam [] bodyTerm =
+  bodyTerm
 
-unwrapALetVars :: Expr -> [Assign] -> Expr
-unwrapALetVars body ((Assign var varType varExpr):vars) =
-  ALet var varType varExpr (unwrapALetVars body vars)
+unwrapALetVars :: Term -> [Assign] -> Term
+unwrapALetVars body ((Assign var varType varTerm):vars) =
+  ALet var varType varTerm (unwrapALetVars body vars)
 unwrapALetVars body [] =
   body
 
-unwrapLetVars :: Expr -> [Assign] -> Expr
+unwrapLetVars :: Term -> [Assign] -> Term
 unwrapLetVars body assigns =
   unwrapApps (unwrapLams body assigns) (reverse assigns)
   where

@@ -25,91 +25,91 @@ updateWitnessEnv f (tEnv, wEnv) =
   (tEnv, f wEnv)
 
 typecheckProgram :: TypecheckEnv -> Program -> TypecheckerOutput
-typecheckProgram env (Program expr) =
-  case runTypecheckM env (typecheckExpression expr) of
+typecheckProgram env (Program term) =
+  case runTypecheckM env (typecheckTerm term) of
     (Right typePair) -> TypecheckSuccess typePair
     (Left err) -> TypecheckFailure err
 
-typecheckExpression :: Expr -> TypecheckM
-typecheckExpression (Number n) =
-  return (L.IntType, L.IntWit n)
-typecheckExpression (Boolean b) =
-  return (L.BoolType, L.BoolWit b)
-typecheckExpression (L.Brack expr) =
-  typecheckExpression expr
-typecheckExpression (L.Var x) = do
+typecheckTerm :: Term -> TypecheckM
+typecheckTerm (Number n) =
+  return (L.IntType, L.Number n)
+typecheckTerm (Boolean b) =
+  return (L.BoolType, L.Boolean b)
+typecheckTerm (L.Brack term) =
+  typecheckTerm term
+typecheckTerm (L.Var x) = do
   (tEnv, _) <- ask
   varType <- E.loadE x (Err.TruthVarUndefined x) tEnv
-  return (varType, L.VarWit x)
-typecheckExpression (L.Lam arg argType body) = do
-  (returnType, returnWit) <- local (updateTruthEnv $ E.save arg argType) (typecheckExpression body)
-  return (L.LamType argType returnType, L.LamWit arg argType returnWit)
-typecheckExpression (App left right) = do
-  (leftType, leftWit) <- typecheckExpression left
+  return (varType, L.Var x)
+typecheckTerm (L.Lam arg argType body) = do
+  (returnType, returnWit) <- local (updateTruthEnv $ E.save arg argType) (typecheckTerm body)
+  return (L.LamType argType returnType, L.Lam arg argType returnWit)
+typecheckTerm (App left right) = do
+  (leftType, leftWit) <- typecheckTerm left
   case leftType of
     (L.LamType argType returnType) -> do
-      (rightType, rightWit) <- typecheckExpression right
+      (rightType, rightWit) <- typecheckTerm right
       if rightType == argType
-      then return (returnType, L.AppWit leftWit rightWit)
+      then return (returnType, L.App leftWit rightWit)
       else throwError (Err.InvalidArgType rightType argType)
     _ ->
       throwError (Err.ExpectedLam left leftType)
-typecheckExpression plusExpr@(Plus leftExpr rightExpr) = do
-  (leftType, leftWit) <- typecheckExpression leftExpr
-  (rightType, rightWit) <- typecheckExpression rightExpr
+typecheckTerm plusTerm@(Plus leftTerm rightTerm) = do
+  (leftType, leftWit) <- typecheckTerm leftTerm
+  (rightType, rightWit) <- typecheckTerm rightTerm
   case (leftType, rightType) of
     (L.IntType, L.IntType) ->
-      return (L.IntType, L.PlusWit leftWit rightWit)
+      return (L.IntType, L.Plus leftWit rightWit)
     _ ->
-      throwError (Err.InvalidPlusArgs plusExpr)
-typecheckExpression eqExpr@(Eq leftExpr rightExpr) = do
-  (leftType, leftWit) <- typecheckExpression leftExpr
-  (rightType, rightWit) <- typecheckExpression rightExpr
+      throwError (Err.InvalidPlusArgs plusTerm)
+typecheckTerm eqTerm@(Eq leftTerm rightTerm) = do
+  (leftType, leftWit) <- typecheckTerm leftTerm
+  (rightType, rightWit) <- typecheckTerm rightTerm
   case (leftType, rightType) of
     (L.IntType, L.IntType) ->
-      return (L.BoolType, L.EqWit leftWit rightWit)
+      return (L.BoolType, L.Eq leftWit rightWit)
     (L.BoolType, L.BoolType) ->
-      return (L.BoolType, L.EqWit leftWit rightWit)
+      return (L.BoolType, L.Eq leftWit rightWit)
     _ ->
-      throwError (Err.InvalidEqArgs eqExpr)
-typecheckExpression (Ite condExpr thenExpr elseExpr) = do
-  (condType, condWit) <- typecheckExpression condExpr
+      throwError (Err.InvalidEqArgs eqTerm)
+typecheckTerm (Ite condTerm thenTerm elseTerm) = do
+  (condType, condWit) <- typecheckTerm condTerm
   case condType of
     L.BoolType -> do
-      (thenType, thenWit) <- typecheckExpression thenExpr
-      (elseType, elseWit) <- typecheckExpression elseExpr
+      (thenType, thenWit) <- typecheckTerm thenTerm
+      (elseType, elseWit) <- typecheckTerm elseTerm
       if thenType == elseType then
-        return (thenType, L.IteWit condWit thenWit elseWit)
+        return (thenType, L.Ite condWit thenWit elseWit)
       else
-        throwError (Err.InvalidIfBranches thenExpr thenType elseExpr elseType)
+        throwError (Err.InvalidIfBranches thenTerm thenType elseTerm elseType)
     _ ->
-      throwError (Err.InvalidIfCond condExpr condType)
-typecheckExpression (AVar u) = do
+      throwError (Err.InvalidIfCond condTerm condType)
+typecheckTerm (AVar u) = do
   (_, wEnv) <- ask
   varType <- E.loadE u (Err.ValidityVarUndefined u) wEnv
-  return (varType, L.AVarWit u)
-typecheckExpression (Bang body _) = do
-  (bodyType, bodyWit) <- local (updateTruthEnv $ const E.empty) (typecheckExpression body)
-  return (L.BangType bodyType bodyWit, L.BangWit bodyWit)
-typecheckExpression (ALet u uType arg body) = do
-  (argType, argWit) <- typecheckExpression arg
+  return (varType, L.AVar u)
+typecheckTerm (Bang body _) = do
+  (bodyType, bodyWit) <- local (updateTruthEnv $ const E.empty) (typecheckTerm body)
+  return (L.BangType bodyType bodyWit, L.Bang bodyWit L.NoTrail)
+typecheckTerm (ALet u uType arg body) = do
+  (argType, argWit) <- typecheckTerm arg
   case argType of
     (L.BangType bangType bangWit) | bangType == uType -> do
-      (bodyType, bodyWit) <- local (updateWitnessEnv $ E.save u bangType) (typecheckExpression body)
-      return (witSubOverAVarOnType u bangWit bodyType, L.ALetWit u uType bodyWit argWit)
+      (bodyType, bodyWit) <- local (updateWitnessEnv $ E.save u bangType) (typecheckTerm body)
+      return (witSubOverAVarOnType u bangWit bodyType, L.ALet u uType bodyWit argWit)
     (L.BangType bangType _) | bangType /= uType ->
       throwError (Err.InvalidLetArgType uType bangType)
     _ -> throwError (Err.ExpectedBang argType)
-typecheckExpression inspectExpr@(Inspect exprBranches) = do
-  (branchTypes, branchWits) <- typecheckBranches exprBranches
+typecheckTerm inspectTerm@(Inspect termBranches) = do
+  (branchTypes, branchWits) <- typecheckBranches termBranches
   if branchTypes == createExpectedBranches (r branchTypes) then
-    return (r branchTypes, L.TiWit branchWits)
+    return (r branchTypes, L.Inspect branchWits)
   else
-    throwError (Err.BadInspectBranch inspectExpr)
+    throwError (Err.BadInspectBranch inspectTerm)
   where
     keepWitEnv (_, wEnv) = (E.empty, wEnv)
     typecheckBranches branches = do
-      mapResult <- mapTrailBranchesM (local keepWitEnv . typecheckExpression) branches
+      mapResult <- mapTrailBranchesM (local keepWitEnv . typecheckTerm) branches
       return $ unzipTrailBranches mapResult
     createLamType :: L.Type -> Integer -> L.Type
     createLamType t n

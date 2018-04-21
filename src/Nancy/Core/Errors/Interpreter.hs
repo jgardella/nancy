@@ -11,9 +11,9 @@ data InterpretError
   | ExpectedBang Value
   | BadTrailValue
   | InvalidTrailBranchList
-  | InvalidPlusArgs Expr
-  | InvalidEqArgs Expr
-  | InvalidIfCond Expr Value
+  | InvalidPlusArgs Term
+  | InvalidEqArgs Term
+  | InvalidIfCond Term Value
   | PreInterpretError String
   deriving (Eq, Show)
 
@@ -28,12 +28,12 @@ instance Pretty InterpretError where
     text "Expected Bang value, but got" <+> pPrint value
   pPrint BadTrailValue =
     text "Bad trail value"
-  pPrint (InvalidPlusArgs plusExpr) =
-    text "Invalid plus args in expression:" <+> text (show plusExpr)
-  pPrint (InvalidEqArgs eqExpr) =
-    text "Invalid eq args in expression:" <+> text (show eqExpr)
-  pPrint (InvalidIfCond condExpr condVal) =
-    text "If condition should be boolean value, but expression" <+> text (show condExpr)
+  pPrint (InvalidPlusArgs plusTerm) =
+    text "Invalid plus args in expression:" <+> text (show plusTerm)
+  pPrint (InvalidEqArgs eqTerm) =
+    text "Invalid eq args in expression:" <+> text (show eqTerm)
+  pPrint (InvalidIfCond condTerm condVal) =
+    text "If condition should be boolean value, but expression" <+> text (show condTerm)
     <+> text "has value" <+> pPrint condVal
   pPrint InvalidTrailBranchList =
     text "Invalid trail branch list"

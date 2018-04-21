@@ -24,26 +24,58 @@ mapType _ typeFunc (LamType argType returnType) =
 mapType witFunc typeFunc (BangType bangType bangWit) =
   BangType (typeFunc bangType) (witFunc bangWit)
 
-newtype Program = Program Expr
+newtype Program = Program Term
   deriving (Eq, Show)
 
-data Expr
+data Expr a
   = Var String
   | Number Int
   | Boolean Bool
-  | Brack Expr
-  | Lam String Type Expr
-  | App Expr Expr
-  | Plus Expr Expr
-  | Eq Expr Expr
-  | Ite Expr Expr Expr
+  | Brack (Expr a)
+  | Lam String Type (Expr a)
+  | App (Expr a) (Expr a)
+  | Plus (Expr a) (Expr a)
+  | Eq (Expr a) (Expr a)
+  | Ite (Expr a) (Expr a) (Expr a)
   | AVar String
-  | Bang Expr Trail
-  | ALet String Type Expr Expr
-  | Inspect (TrailBranches Expr)
+  | Bang (Expr a) a
+  | ALet String Type (Expr a) (Expr a)
+  | Inspect (TrailBranches (Expr a))
   deriving (Eq, Show)
 
-mapExpr :: (Expr -> Expr) -> Expr -> Expr
+instance Pretty (Expr a) where
+  pPrint (Var var) = text var
+  pPrint (Number n) = text (show n)
+  pPrint (Boolean b) = text (show b)
+  pPrint (Brack expr) = parens(pPrint expr)
+  pPrint (Lam arg argType bodyExpr) = vcat [
+      text "fun" <+> parens(text arg <> colon <> pPrint argType) <+> text "->",
+      nest 2 (pPrint bodyExpr)
+    ]
+  pPrint (App leftExpr rightExpr) =
+    parens(pPrint leftExpr <+> pPrint rightExpr)
+  pPrint (Plus leftExpr rightExpr) =
+    parens(pPrint leftExpr <+> text "+" <+> pPrint rightExpr)
+  pPrint (Eq leftExpr rightExpr) =
+    parens(pPrint leftExpr <+> text "=" <+> pPrint rightExpr)
+  pPrint (Ite condExpr thenExpr elseExpr) = vcat [
+      text "if" <+> pPrint condExpr,
+      text "then",
+      nest 2 (pPrint thenExpr),
+      text "else",
+      nest 2 (pPrint elseExpr)
+    ]
+  pPrint (AVar avar) = lbrack <> text avar <> rbrack
+  pPrint (Bang bodyExpr _) =
+    text "!" <> pPrint bodyExpr
+  pPrint (ALet arg argType argExpr bodyExpr) = vcat [
+      text "let!" <+> parens(text arg <> colon <> pPrint argType) <+> text "=" <+> pPrint argExpr <+> text "in",
+      pPrint bodyExpr
+    ]
+  pPrint (Inspect branches) =
+    pPrint branches
+
+mapExpr :: (Expr a -> Expr a) -> Expr a -> Expr a
 mapExpr _ expr@Var{} = expr
 mapExpr _ expr@Number{} = expr
 mapExpr _ expr@Boolean{} = expr
@@ -69,7 +101,7 @@ mapExpr f (Inspect branches) =
 data Value
   = IntVal Int
   | BoolVal Bool
-  | LamVal String Type Expr
+  | LamVal String Type Term
   | VarVal String
   | AVarVal String
   | BangVal Value TrailWithMode
@@ -88,69 +120,11 @@ instance Pretty Value where
   pPrint (AVarVal u) = text "<" <> text u <> text ">"
   pPrint (BangVal value trail) = text "!" <> brackets(pPrint trail) <+> pPrint value
 
-data Witness
-  = VarWit String
-  | IntWit Int
-  | BoolWit Bool
-  | LamWit String Type Witness
-  | AppWit Witness Witness
-  | PlusWit Witness Witness
-  | EqWit Witness Witness
-  | IteWit Witness Witness Witness
-  | AVarWit String
-  | BangWit Witness
-  | ALetWit String Type Witness Witness
-  | TiWit (TrailBranches Witness)
+data NoTrail = NoTrail
   deriving (Eq, Show)
 
-instance Pretty Witness where
-  pPrint (VarWit var) =
-    text "varwit" <> parens(text var)
-  pPrint (IntWit intVal) =
-    text "intwit" <> parens(text (show intVal))
-  pPrint (BoolWit boolVal) =
-    text "boolwit" <> parens(text (show boolVal))
-  pPrint (LamWit arg argType bodyWit) =
-    text "lamwit" <> parens(text arg <> colon <> pPrint argType <> comma <+> pPrint bodyWit)
-  pPrint (AppWit lamWit argWit) =
-    text "appwit" <> parens(pPrint lamWit <> comma <> pPrint argWit)
-  pPrint (PlusWit leftWit rightWit) =
-    text "pluswit" <> parens(pPrint leftWit <> comma <+> pPrint rightWit)
-  pPrint (EqWit leftWit rightWit) =
-    text "eqwit" <> parens(pPrint leftWit <> comma <+> pPrint rightWit)
-  pPrint (IteWit condWit trueWit falseWit) =
-    text "itewit" <> parens(pPrint condWit <> comma <+> pPrint trueWit <> comma <+> pPrint falseWit)
-  pPrint (AVarWit avar) =
-    text "avarwit" <> parens(text avar)
-  pPrint (BangWit bangWit) =
-    text "bangwit" <> parens(pPrint bangWit)
-  pPrint (ALetWit arg argType argWit bodyWit) =
-    text "aletwit" <> parens(text arg <> colon <> pPrint argType <> comma
-      <+> pPrint argWit <> comma <+> pPrint bodyWit)
-  pPrint (TiWit branches) =
-    text "tiwit" <> parens(pPrint branches)
-
-mapWitness :: (Type -> Type) -> (Witness -> Witness) -> Witness -> Witness
-mapWitness _ _ wit@VarWit{} = wit
-mapWitness _ _ wit@IntWit{} = wit
-mapWitness _ _ wit@BoolWit{} = wit
-mapWitness typeFunc witFunc (LamWit var varType lamWit) =
-  LamWit var (typeFunc varType) (witFunc lamWit)
-mapWitness _ witFunc (AppWit lamWit argWit) =
-  AppWit (witFunc lamWit) (witFunc argWit)
-mapWitness _ witFunc (PlusWit leftWit rightWit) =
-  PlusWit (witFunc leftWit) (witFunc rightWit)
-mapWitness _ witFunc (EqWit leftWit rightWit) =
-  EqWit (witFunc leftWit) (witFunc rightWit)
-mapWitness _ witFunc (IteWit condWit trueWit falseWit) =
-  IteWit (witFunc condWit) (witFunc trueWit) (witFunc falseWit)
-mapWitness _ _ wit@AVarWit{} = wit
-mapWitness _ witFunc (BangWit bangWit) =
-  BangWit $ witFunc bangWit
-mapWitness typeFunc witFunc (ALetWit var varType argWit bodyWit) =
-  ALetWit var (typeFunc varType) (witFunc argWit) (witFunc bodyWit)
-mapWitness typeFunc witFunc (TiWit branchWits) =
-  TiWit $ fmap (mapWitness typeFunc witFunc) branchWits
+type Term = Expr Trail
+type Witness = Expr NoTrail
 
 data TrailBranches a = TrailBranches {
   r :: a,
